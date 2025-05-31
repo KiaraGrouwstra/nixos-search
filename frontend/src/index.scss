@@ -371,7 +371,7 @@
   // show longer details link
   .result-item-show-more {
     margin: 0 auto;
-    display: none;
+    display: inline-block;
     text-align: center;
     text-decoration: none;
     line-height: 1.5em;
@@ -387,7 +387,6 @@
     padding-bottom: 0;
 
     .result-item-show-more {
-      display: inline-block;
       padding-top: 0.5em;
     }
   }
