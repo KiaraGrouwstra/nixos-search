@@ -1,0 +1,7 @@
+# Global owners - default reviewers for everything
+* @raboof @KiaraGrouwstra
+
+/flake-info/   @Malix-Labs
+/frontend/src/scss/  @Sigmanificient
+/frontend/benchmark/  @hsjobeki
+frontend/src/Search/Query.elm  @hsjobeki
