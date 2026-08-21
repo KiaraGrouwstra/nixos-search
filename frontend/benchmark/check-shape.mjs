@@ -22,12 +22,13 @@
  */
 
 import { execFileSync } from "node:child_process";
-import { createRequire } from "node:module";
 import { mkdtempSync, readFileSync, rmSync, existsSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, dirname, resolve } from "node:path";
 import { parseArgs } from "node:util";
 import { fileURLToPath } from "node:url";
+
+import { bootWorker } from "./lib/worker.mjs";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const FRONTEND_DIR = resolve(__dirname, "..");
@@ -51,38 +52,6 @@ const { values: args } = parseArgs({
 });
 
 const K = parseInt(args.k, 10);
-
-/**
- * Compile `Benchmark.elm` from a source directory and boot the worker.
- *
- * Each tree gets its own `elm make` output, but they share `~/.elm`, so the
- * second compile only rebuilds the modules that actually differ.
- */
-function bootWorker(sourceDir, label) {
-    const outDir = mkdtempSync(join(tmpdir(), `nixos-search-shape-${label}-`));
-    const workerPath = join(outDir, "benchmark.js");
-    console.error(`[check-shape] compiling ${label} -> ${workerPath}`);
-    execFileSync(
-        join(FRONTEND_DIR, "node_modules/.bin/elm"),
-        ["make", "src/Benchmark.elm", "--optimize", "--output", workerPath],
-        { cwd: sourceDir, stdio: ["ignore", "ignore", "inherit"] },
-    );
-    const require = createRequire(import.meta.url);
-    const app = require(workerPath).Elm.Benchmark.init({ flags: {} });
-    return {
-        bodiesFor(query) {
-            return new Promise((resolve) => {
-                const once = (bodies) => {
-                    app.ports.gotBodies.unsubscribe(once);
-                    resolve(bodies);
-                };
-                app.ports.gotBodies.subscribe(once);
-                app.ports.sendQuery.send({ query, k: K });
-            });
-        },
-        cleanup: () => rmSync(outDir, { recursive: true, force: true }),
-    };
-}
 
 /**
  * Check out a revision's `frontend/` into a scratch directory.
@@ -120,15 +89,18 @@ const queries = [
 ];
 
 const referenceDir = checkoutFrontend(args.reference);
-const reference = bootWorker(referenceDir, "reference");
-const current = bootWorker(FRONTEND_DIR, "current");
+const reference = bootWorker({ sourceDir: referenceDir, label: "reference" });
+const current = bootWorker({ sourceDir: FRONTEND_DIR, label: "current" });
+
+const [wasAll, isAll] = await Promise.all([
+    reference.bodiesFor(queries, K),
+    current.bodiesFor(queries, K),
+]);
 
 let differing = 0;
-for (const query of queries) {
-    const [was, is] = await Promise.all([
-        reference.bodiesFor(query),
-        current.bodiesFor(query),
-    ]);
+for (const [i, query] of queries.entries()) {
+    const was = wasAll[i];
+    const is = isAll[i];
     for (const track of ["packages", "options"]) {
         if (was[track] === is[track]) continue;
         differing += 1;

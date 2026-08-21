@@ -5,11 +5,26 @@
  * scores curated queries against our live ES instance.
  *
  * Usage:
- *   node benchmark/run.mjs [--packages <path>] [--options <path>] [--channel <branch>] [--schema <n>] [--index <name>] [--k <n>] [--persistence <f>]
+ *   node benchmark/run.mjs [--packages <path>] [--options <path>] [--channel <branch>] [--schema <n>] [--index <name>] [--k <n>] [--persistence <f>] [--json] [--msearch <n>] [--cache <path>]
  *
  * `--index` names a concrete index instead of the `latest-<schema>-<channel>`
  * alias, which pins an A/B to one nixpkgs evaluation once the alias has moved
  * on to a newer one.
+ *
+ * `--json` prints the per-query rows and the aggregates as JSON instead of the
+ * markdown report, so a comparison does not have to parse prose.
+ *
+ * `--msearch <n>` batches `n` queries per request, which is minutes against the
+ * live cluster rather than seconds. It is off by default because the report is
+ * the artifact people diff, and a batched run is only worth trusting once it has
+ * been shown to produce the same one.
+ *
+ * `--cache <path>` reuses the answer to any request body already seen at this
+ * index, which is what makes repeated A/Bs cheap.
+ *
+ * The metric definitions, the category weights, and the Elasticsearch client all
+ * live in `lib/`, shared with `evolve/` - a search that optimized a metric this
+ * report does not print would be optimizing something nobody agreed to.
  *
  * Each curated query is an object:
  *
@@ -32,13 +47,16 @@
  *               anything else on the page counts as noise. Required for RBP.
  */
 
-import { execSync } from "node:child_process";
-import { createRequire } from "node:module";
-import { mkdtempSync, readFileSync } from "node:fs";
-import { tmpdir } from "node:os";
+import { readFileSync } from "node:fs";
 import { join, dirname, resolve } from "node:path";
 import { parseArgs } from "node:util";
 import { fileURLToPath } from "node:url";
+
+import { cacheKey, openCache } from "./lib/cache.mjs";
+import { esClient, esConfigFromEnv } from "./lib/es.mjs";
+import { mean, rankHits, scoreQuery, weightedMean } from "./lib/metrics.mjs";
+import { WEIGHTS, checkWeights } from "./lib/weights.mjs";
+import { bootWorker } from "./lib/worker.mjs";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const FRONTEND_DIR = resolve(__dirname, "..");
@@ -70,6 +88,9 @@ const { values: args } = parseArgs({
         index: { type: "string" },
         k: { type: "string", default: "10" },
         persistence: { type: "string", default: "0.8" },
+        json: { type: "boolean", default: false },
+        msearch: { type: "string" },
+        cache: { type: "string" },
     },
     strict: false,
 });
@@ -79,351 +100,76 @@ const K = parseInt(args.k, 10);
 const P = parseFloat(args.persistence);
 const SCHEMA = args.schema ?? frontendSchema();
 const INDEX = args.index ?? `latest-${SCHEMA}-${args.channel}`;
-const ES_URL =
-    process.env.ELASTICSEARCH_URL || "https://search.nixos.org/backend";
-const ES_USER = process.env.ELASTICSEARCH_USERNAME || "aWVSALXpZv";
-const ES_PASS =
-    process.env.ELASTICSEARCH_PASSWORD || "X8gPHnzL52wFEekuxsfQ9cSh";
-const AUTH = "Basic " + Buffer.from(`${ES_USER}:${ES_PASS}`).toString("base64");
+const BATCH = args.msearch ? parseInt(args.msearch, 10) : 1;
 
-// Compile elm
-const tmpDir = mkdtempSync(join(tmpdir(), "nixos-search-benchmark-"));
-const workerPath = join(tmpDir, "benchmark.js");
-console.error(`[benchmark] compiling Benchmark.elm → ${workerPath}`);
-execSync(
-    `node_modules/.bin/elm make src/Benchmark.elm --optimize --output ${workerPath}`,
-    { cwd: FRONTEND_DIR, stdio: ["ignore", "ignore", "inherit"] },
-);
+const es = esClient({ ...esConfigFromEnv(), index: INDEX });
+const cache = args.cache ? openCache(args.cache) : null;
+const worker = bootWorker({ label: "benchmark" });
 
-const require = createRequire(import.meta.url);
-const { Elm } = require(workerPath);
-const app = Elm.Benchmark.init({ flags: {} });
+/**
+ * The pages for a list of request bodies, as `rankHits` reads them.
+ *
+ * Cached against `sha256(index + body)`: the body fixes the query, the page
+ * size and - because the two tracks never share one - which track's name field
+ * to read, and the index is pinned, so the answer cannot have changed.
+ */
+async function pagesFor(bodies, field, prefix) {
+    const pages = new Array(bodies.length);
+    const misses = [];
+    for (const [i, body] of bodies.entries()) {
+        const key = cache && cacheKey(INDEX, body);
+        if (key && cache.has(key)) pages[i] = cache.get(key);
+        else misses.push(i);
+    }
 
-// Helpers
-const RETRYABLE_STATUS = new Set([429, 502, 503, 504]);
-const MAX_ATTEMPTS = 5;
-
-const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
-
-async function esSearch(bodyJson) {
-    const url = `${ES_URL}/${INDEX}/_search`;
-    let lastErr;
-    for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
-        try {
-            const resp = await fetch(url, {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    Authorization: AUTH,
-                },
-                body: bodyJson,
-            });
-            if (resp.ok) return resp.json();
-            const text = await resp.text();
-            // Non-retryable (e.g. auth/query errors): fail immediately.
-            if (!RETRYABLE_STATUS.has(resp.status)) {
-                throw new Error(`ES ${resp.status}: ${text}`);
-            }
-            lastErr = new Error(`ES ${resp.status}: ${text}`);
-        } catch (err) {
-            // fetch() rejects on network faults (ECONNRESET, DNS, TLS); retry those.
-            if (err instanceof TypeError && err.cause) {
-                lastErr = err;
-            } else {
-                throw err;
-            }
-        }
-        if (attempt < MAX_ATTEMPTS) {
-            // Exponential backoff with jitter: ~0.5s, 1s, 2s, 4s.
-            const backoff = 500 * 2 ** (attempt - 1) + Math.random() * 250;
-            console.error(
-                `[benchmark] request failed (attempt ${attempt}/${MAX_ATTEMPTS}): ${lastErr.message}; retrying in ${Math.round(backoff)}ms`,
-            );
-            await sleep(backoff);
+    for (let at = 0; at < misses.length; at += BATCH) {
+        const slice = misses.slice(at, at + BATCH);
+        const responses =
+            BATCH === 1
+                ? [await es.search(bodies[slice[0]])]
+                : await es.msearch(slice.map((i) => bodies[i]));
+        for (const [j, i] of slice.entries()) {
+            const data = responses[j];
+            const page = {
+                ranked: rankHits(data.hits.hits, field, prefix, K),
+                matched: data.hits.total.value,
+                matchedExact: data.hits.total.relation === "eq",
+            };
+            pages[i] = page;
+            if (cache) cache.set(cacheKey(INDEX, bodies[i]), page);
         }
     }
-    throw lastErr;
+    return pages;
 }
 
-// ES returns hits in score order per index, so no re-sort is needed;
-// dedup is kept for parity with the previous merged ranker.
-function rankHits(hits, field, prefix, k) {
-    const out = [],
-        seen = new Set();
-    for (const h of hits) {
-        const name = h._source?.[field];
-        if (!name) continue;
-        const id = prefix + name;
-        if (seen.has(id)) continue;
-        seen.add(id);
-        out.push(id);
-        if (out.length === k) break;
-    }
-    return out;
-}
-
-// The gold set as ranked tiers, validated. A tier is a non-empty list of ids
-// tied at that rank, and an id belongs to exactly one of them.
-function tiers(q) {
-    if (!Array.isArray(q.relevant) || q.relevant.length === 0) {
-        throw new Error(`${q.id}: "relevant" must be a non-empty list of tiers`);
-    }
-    const seen = new Set();
-    for (const tier of q.relevant) {
-        if (!Array.isArray(tier) || tier.length === 0) {
-            throw new Error(
-                `${q.id}: every tier of "relevant" must be a non-empty list of ids, got ${JSON.stringify(tier)}`,
-            );
-        }
-        for (const id of tier) {
-            if (typeof id !== "string") {
-                throw new Error(
-                    `${q.id}: tier entry ${JSON.stringify(id)} is not a string`,
-                );
-            }
-            if (seen.has(id)) {
-                throw new Error(`${q.id}: ${id} appears in more than one tier`);
-            }
-            seen.add(id);
-        }
-    }
-    return q.relevant;
-}
-
-// The gold set flattened back to a plain set of acceptable answers, which is
-// what the membership metrics ask for.
-function flatRelevant(q) {
-    return tiers(q).flat();
-}
-
-function reciprocalRank(ranked, relevant) {
-    const rel = new Set(relevant);
-    for (let i = 0; i < ranked.length; i++) {
-        if (rel.has(ranked[i])) return 1 / (i + 1);
-    }
-    return 0;
-}
-
-// The one answer a user typing this query is most likely after, or `null` where
-// the gold set declines to name one. The top tier holds it whenever that tier
-// holds a single id - including the single-answer case, where with nothing to
-// compare against it is the best answer by definition. A tie at the top states
-// no preference, so there is no ordinal claim to score.
-function bestAnswer(q) {
-    const top = tiers(q)[0];
-    return top.length === 1 ? top[0] : null;
-}
-
-// Reciprocal rank of the best answer, rather than of the first relevant hit.
-//
-// MRR asks "did we surface something usable", which a cluster gold set answers
-// trivially: on `node`, every `nodejs*` variant is relevant, so MRR reads 1.000
-// whether `nodejs` or `nodejs-slim_26` came first. BestRR asks the ordinal
-// question instead - "did the answer they wanted come first" - and separates
-// those two pages 1.000 to 0.167.
-//
-// It collapses to MRR on a single-answer query, so it only speaks up on the
-// cluster queries it was added for. Returns `null` when the query makes no
-// ordinal claim, which drops it from the mean.
-function bestReciprocalRank(ranked, best) {
-    if (best === null) return null;
-    const i = ranked.indexOf(best);
-    return i === -1 ? 0 : 1 / (i + 1);
-}
-
-// Graded nDCG (Jarvelin & Kekalainen 2002) over the gold set's tiers: a hit in
-// tier `i` of `T` grades `T - i`, and anything off the gold set grades 0.
-//
-// Where BestRR prices one position, this prices the whole page against its ideal
-// ordering, so demoting a variant below the canonical package pays off even when
-// the canonical package was already first. A single-tier query keeps a flat
-// grade of 1 across its gold set, which is ordinary binary nDCG - it still
-// scores, it just states no preference within the set.
-function ndcgAtK(ranked, q, k) {
-    const gold = tiers(q);
-    const grades = new Map(
-        gold.flatMap((tier, i) => tier.map((id) => [id, gold.length - i])),
-    );
-    const gain = (g, i) => g / Math.log2(i + 2);
-
-    const dcg = ranked
-        .slice(0, k)
-        .reduce((a, id, i) => a + gain(grades.get(id) ?? 0, i), 0);
-    // Tiers are already in descending grade order, so this is the ideal page.
-    const idcg = gold
-        .flatMap((tier, i) => tier.map(() => gold.length - i))
-        .slice(0, k)
-        .reduce((a, g, i) => a + gain(g, i), 0);
-    return idcg > 0 ? dcg / idcg : 0;
-}
-
-function successAtK(ranked, relevant, k) {
-    const rel = new Set(relevant);
-    return ranked.slice(0, k).some((id) => rel.has(id)) ? 1 : 0;
-}
-
-function recallAtK(ranked, relevant, k) {
-    const rel = new Set(relevant);
-    const hits = ranked.slice(0, k).filter((id) => rel.has(id)).length;
-
-    const denom = Math.min(k, rel.size);
-    return denom > 0 ? hits / denom : 0;
-}
-
-// Rank-biased precision (Moffat & Zobel 2008), conditioned on the user stopping
-// inside the page we returned.
-//
-// The user model: a user reads rank 1, then moves on to the next rank with
-// probability `p`. So rank `i` is examined with weight `p^(i-1)`.
-//
-//   RBP = sum(p^(i-1) over relevant hits) / sum(p^(i-1) over returned hits)
-//
-// Textbook RBP divides by `1 / (1 - p)`, the weight of an unbounded result list.
-// Dividing by the weight of the hits actually returned conditions the same model
-// on the user stopping inside the page, since
-// `sum(p^(i-1), i=1..n) = (1 - p^n) / (1 - p)`.
-//
-// Properties:
-// - Junk anywhere on the page costs something, discounted by rank.
-// - A page holding fewer than `k` hits is scored on what it returned, so a short
-//   clean page reaches 1.000.
-// - `p` sets how far down the user reads: expected examination depth is
-//   `1 / (1 - p)` results.
-//
-// Requires `"exhaustive": true`, meaning `relevant` enumerates every acceptable
-// answer; otherwise a good-but-unlisted hit scores as noise. Returns `null` when
-// there are no hits, which drops the query from the mean.
-function conditionalRBP(ranked, relevant, p) {
-    if (ranked.length === 0) return null;
-    const rel = new Set(relevant);
-    let num = 0,
-        denom = 0;
-    for (let i = 0; i < ranked.length; i++) {
-        const weight = p ** i;
-        denom += weight;
-        if (rel.has(ranked[i])) num += weight;
-    }
-    return num / denom;
-}
-
-function nextBody(query, k) {
-    return new Promise((resolve) => {
-        const sub = app.ports.gotBodies.subscribe(function handler(bodies) {
-            app.ports.gotBodies.unsubscribe(handler);
-            resolve(bodies);
-        });
-        app.ports.sendQuery.send({ query, k });
-    });
-}
-
-// Score one curated file against a single index. `bodyKey` selects which of the
-// two bodies the Elm worker emits; `field`/`prefix` build the ranked ids.
+/**
+ * Score one curated file against a single index.
+ *
+ * `bodyKey` selects which of the two bodies the Elm worker emits;
+ * `field`/`prefix` build the ranked ids.
+ */
 async function scoreTrack(queries, bodyKey, field, prefix) {
-    const results = [];
-    for (const q of queries) {
-        const bodies = await nextBody(q.q, K);
-        const data = await esSearch(bodies[bodyKey]);
-        const ranked = rankHits(data.hits.hits, field, prefix, K);
-        const relevant = flatRelevant(q);
-        results.push({
-            id: q.id,
-            q: q.q,
-            category: q.category,
-            relevant: q.relevant,
-            ranked,
-            matched: data.hits.total.value,
-            matchedExact: data.hits.total.relation === "eq",
-            mrr: reciprocalRank(ranked, relevant),
-            success: successAtK(ranked, relevant, K),
-            recall: recallAtK(ranked, relevant, K),
-            rbp: q.exhaustive ? conditionalRBP(ranked, relevant, P) : null,
-            bestrr: bestReciprocalRank(ranked, bestAnswer(q)),
-            ndcg: ndcgAtK(ranked, q, K),
-        });
-    }
-    return results;
+    const rendered = await worker.bodiesFor(
+        queries.map((q) => q.q),
+        K,
+    );
+    const pages = await pagesFor(
+        rendered.map((bodies) => bodies[bodyKey]),
+        field,
+        prefix,
+    );
+    return queries.map((q, i) => ({
+        id: q.id,
+        q: q.q,
+        category: q.category,
+        relevant: q.relevant,
+        ...pages[i],
+        ...scoreQuery(q, pages[i].ranked, K, P),
+    }));
 }
 
 const pkgQueries = JSON.parse(readFileSync(args.packages, "utf8"));
 const optQueries = JSON.parse(readFileSync(args.options, "utf8"));
-
-// What share of the aggregate each category is worth.
-//
-// Curated queries are not a sample of anything - they were written down, not
-// observed - so an unweighted mean reports how we do on the mix we happened to
-// invent. `corpus/observed-queries.json` holds real queries mined from shared
-// `search.nixos.org/...?query=` links, and `corpus/mine.mjs` prints the shape
-// distribution the numbers below cite. Re-run it when these are up for review.
-//
-// The corpus has a bias the weights have to respect: a shared link is a link
-// that *worked*, so it can price the plain/dotted/cased/versioned mix but is
-// blind to typos and to failed natural-language queries. Where it can see, the
-// weight follows the observation; where it cannot, the weight is judgement and
-// says so.
-//
-// Weighting at the category level rather than per query is what lets the query
-// sets grow: adding a query sharpens its category's estimate without shifting
-// the mix. Each table sums to 1.
-const WEIGHTS = {
-    // Observed (n=808): plain 84.5%, dotted 6.2%, cased 4.8%, multiterm 2.4%,
-    // versioned 2.1%.
-    packages: {
-        exact: 0.4, // share of the plain block
-        prefix: 0.22, // judgement: every typed search passes through prefix
-        // states and the typeahead queries them, but the corpus only ever sees
-        // the query that got shared
-        typo: 0.1, // judgement: the corpus cannot see these at all
-        intent: 0.08, // judgement: a natural-language query that failed is the
-        // least likely to be shared and the one we most want to fix
-        attrpath: 0.06, // observed 6.2%
-        cased: 0.05, // observed 4.8%
-        multiterm: 0.05, // observed 2.4%, upweighted alongside `intent`
-        versioned: 0.04, // observed 2.1%
-    },
-    // Observed (n=436): plain 45.4%, dotted 41.1% (depth 1: 109, depth 2: 58,
-    // depth 3+: 18), cased 8.0%, multiterm 5.5%. 20.6% carry an uppercase
-    // letter somewhere, most of them inside a path.
-    options: {
-        exact: 0.24, // share of the plain block
-        scoped: 0.22, // a module plus the setting inside it - the same shape as
-        // the depth-1 end of the dotted block, which is most of it
-        dotted: 0.16, // literal paths, the depth-2+ end of that block
-        prefix: 0.1, // judgement, as above
-        leaf: 0.06, // observed: bare leaf names, e.g. `systemPackages`
-        cased: 0.06, // observed: uppercase inside a path
-        typo: 0.06, // judgement
-        multiterm: 0.05, // observed 5.5%
-        intent: 0.05, // judgement
-    },
-};
-
-// A category with no weight would silently drop out of the aggregate and a
-// weight with no category would silently renormalize the rest, so both are
-// errors, and both are worth hearing about before a scoring run rather than
-// after it.
-function checkWeights(track, queries, weights) {
-    const present = new Set(queries.map((q) => q.category));
-    for (const category of [...present].sort()) {
-        if (!(category in weights)) {
-            throw new Error(
-                `${track}: category "${category}" has no weight in WEIGHTS.${track}`,
-            );
-        }
-    }
-    for (const category of Object.keys(weights)) {
-        if (!present.has(category)) {
-            throw new Error(
-                `${track}: WEIGHTS.${track}.${category} has no queries`,
-            );
-        }
-    }
-    const total = Object.values(weights).reduce((a, b) => a + b, 0);
-    if (Math.abs(total - 1) > 1e-6) {
-        throw new Error(
-            `${track}: WEIGHTS.${track} sums to ${total.toFixed(4)}, not 1`,
-        );
-    }
-}
 
 checkWeights("packages", pkgQueries, WEIGHTS.packages);
 checkWeights("options", optQueries, WEIGHTS.options);
@@ -447,26 +193,53 @@ const optResults = await scoreTrack(
     "opt:",
 );
 
-function mean(arr) {
-    return arr.reduce((a, b) => a + b, 0) / arr.length;
+worker.cleanup();
+if (cache) await cache.close();
+
+/**
+ * The category-weighted aggregate for one track.
+ *
+ * RBP only covers the closed-set queries that returned something and BestRR only
+ * the ones that name a best answer, so each carries the count it was read over.
+ */
+function aggregate(results, weights) {
+    const closed = results.filter((r) => r.rbp !== null);
+    const ordinal = results.filter((r) => r.bestrr !== null);
+    const agg = (rows, pick) => weightedMean(rows, weights, pick);
+    return {
+        success: agg(results, (r) => r.success),
+        mrr: agg(results, (r) => r.mrr),
+        recall: agg(results, (r) => r.recall),
+        rbp: agg(closed, (r) => r.rbp),
+        bestrr: agg(ordinal, (r) => r.bestrr),
+        ndcg: agg(results, (r) => r.ndcg),
+        n: results.length,
+        nRbp: closed.length,
+        nBestrr: ordinal.length,
+    };
 }
 
-// Each category contributes `WEIGHTS[track][category]` to the aggregate, split
-// evenly across its members. Renormalizing by the weight actually present lets
-// the metrics that drop queries (RBP, BestRR) reuse this unchanged: a category
-// that contributes nothing to a metric simply leaves its weight out.
-function weightedMean(rows, weights, pick) {
-    const byCategory = {};
-    for (const r of rows) {
-        (byCategory[r.category] ??= []).push(pick(r));
-    }
-    let weighted = 0,
-        present = 0;
-    for (const [category, values] of Object.entries(byCategory)) {
-        weighted += weights[category] * mean(values);
-        present += weights[category];
-    }
-    return present > 0 ? weighted / present : null;
+if (args.json) {
+    console.log(
+        JSON.stringify(
+            {
+                index: INDEX,
+                k: K,
+                persistence: P,
+                packages: {
+                    overall: aggregate(pkgResults, WEIGHTS.packages),
+                    queries: pkgResults,
+                },
+                options: {
+                    overall: aggregate(optResults, WEIGHTS.options),
+                    queries: optResults,
+                },
+            },
+            null,
+            2,
+        ),
+    );
+    process.exit(0);
 }
 
 const table = (header, rows) =>
@@ -561,19 +334,7 @@ const FOOTNOTES = Object.entries(METRICS).map(
 
 // One `## <label>` section: Overall + By-category tables for a single track.
 function section(label, results, weights) {
-    // RBP only covers the closed-set queries that returned something, BestRR
-    // only the ones that name a best answer.
-    const closed = results.filter((r) => r.rbp !== null);
-    const ordinal = results.filter((r) => r.bestrr !== null);
-    const agg = (rows, pick) => weightedMean(rows, weights, pick);
-    const overall = {
-        success: agg(results, (r) => r.success),
-        mrr: agg(results, (r) => r.mrr),
-        recall: agg(results, (r) => r.recall),
-        rbp: agg(closed, (r) => r.rbp),
-        bestrr: agg(ordinal, (r) => r.bestrr),
-        ndcg: agg(results, (r) => r.ndcg),
-    };
+    const overall = aggregate(results, weights);
     const byCategory = {};
     for (const r of results) {
         (byCategory[r.category] ??= []).push(r);
@@ -592,20 +353,20 @@ function section(label, results, weights) {
         table(
             ["metric", "value", metric("n")],
             [
-                [metric("success"), overall.success.toFixed(3), results.length],
-                [metric("mrr"), overall.mrr.toFixed(3), results.length],
-                [metric("recall"), overall.recall.toFixed(3), results.length],
+                [metric("success"), overall.success.toFixed(3), overall.n],
+                [metric("mrr"), overall.mrr.toFixed(3), overall.n],
+                [metric("recall"), overall.recall.toFixed(3), overall.n],
                 [
                     metric("rbp"),
                     overall.rbp === null ? "-" : overall.rbp.toFixed(3),
-                    closed.length,
+                    overall.nRbp,
                 ],
                 [
                     metric("bestrr"),
                     overall.bestrr === null ? "-" : overall.bestrr.toFixed(3),
-                    ordinal.length,
+                    overall.nBestrr,
                 ],
-                [metric("ndcg"), overall.ndcg.toFixed(3), results.length],
+                [metric("ndcg"), overall.ndcg.toFixed(3), overall.n],
             ],
         ),
         "",

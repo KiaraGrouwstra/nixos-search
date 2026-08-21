@@ -1,4 +1,4 @@
-module Search.Query exposing (defaultOptionsShape, defaultPackagesShape, optionsBody, packagesBody, platforms)
+module Search.Query exposing (defaultOptionsShape, defaultPackagesShape, optionsBody, optionsBodyWith, packagesBody, packagesBodyWith, platforms)
 
 {-| Single source of truth for the Elasticsearch query the client sends.
 
@@ -63,6 +63,8 @@ platforms =
     ]
 
 
+{-| The package query the client sends, ranked by `defaultPackagesShape`.
+-}
 packagesBody :
     String
     -> Int
@@ -70,7 +72,25 @@ packagesBody :
     -> Sort
     -> List ( String, List String )
     -> Json.Encode.Value
-packagesBody query from size sort selectedBuckets =
+packagesBody =
+    packagesBodyWith defaultPackagesShape
+
+
+{-| The same query ranked by a shape the caller supplies.
+
+`benchmark/evolve` scores candidate shapes through this, so that what it tunes
+is rendered by the encoder that ships rather than by a reimplementation of it.
+
+-}
+packagesBodyWith :
+    Shape
+    -> String
+    -> Int
+    -> Int
+    -> Sort
+    -> List ( String, List String )
+    -> Json.Encode.Value
+packagesBodyWith shape query from size sort selectedBuckets =
     let
         terms : List Terms
         terms =
@@ -126,7 +146,7 @@ packagesBody query from size sort selectedBuckets =
         [ "package_pversion" ]
         terms
         filterByBuckets
-        defaultPackagesShape
+        shape
         [ KwAttrName KwBase ]
 
 
@@ -145,6 +165,8 @@ filterByBucket field value =
     ]
 
 
+{-| The option query the client sends, ranked by `defaultOptionsShape`.
+-}
 optionsBody :
     List String
     -> String
@@ -152,7 +174,21 @@ optionsBody :
     -> Int
     -> Sort
     -> Json.Encode.Value
-optionsBody types query from size sort =
+optionsBody =
+    optionsBodyWith defaultOptionsShape
+
+
+{-| The same query ranked by a shape the caller supplies.
+-}
+optionsBodyWith :
+    Shape
+    -> List String
+    -> String
+    -> Int
+    -> Int
+    -> Sort
+    -> Json.Encode.Value
+optionsBodyWith shape types query from size sort =
     encodeRequestBody
         (String.trim query)
         from
@@ -163,7 +199,7 @@ optionsBody types query from size sort =
         []
         []
         []
-        defaultOptionsShape
+        shape
         [ KwOptionName KwBase ]
 
 
