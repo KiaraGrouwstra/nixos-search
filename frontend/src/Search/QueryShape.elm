@@ -356,16 +356,20 @@ type PathKwSub
 
 {-| A field a rescore script can read through `doc[...]`, which needs doc
 values, so keyword fields only.
+
+Single-valued fields only, too: `doc[...].value` on a multi-valued field returns
+whichever value sorts first, so the length of `package_programs` is the length of
+an arbitrary one of them - a number, but not one that means anything. That rules
+out `package_programs` and `service_packages`; `service_package` is left out
+because it is set on 35 of 180,975 documents.
+
 -}
 type DocValueField
     = DocPackageAttrName
     | DocOptionName
     | DocPackagePname
-    | DocPackagePrograms
     | DocPackageMainProgram
     | DocPackageAttrSet
-    | DocServicePackage
-    | DocServicePackages
 
 
 {-| The two `rank_feature` fields in the mapping.
@@ -376,12 +380,15 @@ type RankFeatureField
 
 
 {-| How a `rank_feature` clause turns a stored feature value into a score.
+
+Elasticsearch also documents a `linear` function, which the deployed 7.10.2
+does not have - it arrived in 7.13 - so it is not representable here.
+
 -}
 type RankFeatureFn
     = Saturation Positive
     | Log Positive
     | Sigmoid Positive Unit
-    | Linear
 
 
 
@@ -770,20 +777,11 @@ docValueFieldName field =
         DocPackagePname ->
             "package_pname"
 
-        DocPackagePrograms ->
-            "package_programs"
-
         DocPackageMainProgram ->
             "package_mainProgram"
 
         DocPackageAttrSet ->
             "package_attr_set"
-
-        DocServicePackage ->
-            "service_package"
-
-        DocServicePackages ->
-            "service_packages"
 
 
 {-| The Elasticsearch name of a rank-feature field.
@@ -985,7 +983,17 @@ rescoreSource : RescoreFn -> String
 rescoreSource fn =
     case fn of
         InverseFieldLength field ->
-            "1.0 / doc['" ++ docValueFieldName field ++ "'].value.length()"
+            let
+                doc =
+                    "doc['" ++ docValueFieldName field ++ "']"
+            in
+            -- `.value` on a document that does not have the field throws, and a
+            -- rescore runs over whatever the query matched rather than over a
+            -- filtered set - so a sparse field like `package_mainProgram` would
+            -- fail the whole search on the first document without one. A missing
+            -- field scores 0, which leaves such a document where the query put
+            -- it instead of ranking it.
+            doc ++ ".size() == 0 ? 0 : 1.0 / " ++ doc ++ ".value.length()"
 
 
 {-| The envelope's negated-word clauses: a `wildcard` per excluded word and
@@ -1302,9 +1310,6 @@ encodeRankFeatureFn fn =
                 , ( "exponent", Json.Encode.float (unitValue exponent) )
                 ]
             )
-
-        Linear ->
-            ( "linear", Json.Encode.object [] )
 
 
 multiMatchKindName : MultiMatchKind -> String
@@ -1645,9 +1650,6 @@ rankFeatureFnToJson fn =
                 , ( "exponent", Json.Encode.float (unitValue exponent) )
                 ]
 
-        Linear ->
-            tagged "linear" []
-
 
 termToJson : Term -> Json.Encode.Value
 termToJson term =
@@ -1893,7 +1895,6 @@ rankFeatureFnDecoder =
                 (Json.Decode.field "pivot" positiveDecoder)
                 (Json.Decode.field "exponent" unitDecoder)
           )
-        , ( "linear", Json.Decode.succeed Linear )
         ]
 
 
@@ -2054,11 +2055,8 @@ docValueFields =
     [ DocPackageAttrName
     , DocOptionName
     , DocPackagePname
-    , DocPackagePrograms
     , DocPackageMainProgram
     , DocPackageAttrSet
-    , DocServicePackage
-    , DocServicePackages
     ]
         |> List.map (\field -> ( docValueFieldName field, field ))
 

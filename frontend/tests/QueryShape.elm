@@ -509,7 +509,6 @@ rankFeatureSpecFuzzer =
             [ Fuzz.map Saturation positiveFuzzer
             , Fuzz.map Log positiveFuzzer
             , Fuzz.map2 Sigmoid positiveFuzzer (Fuzz.map QueryShape.unit (Fuzz.floatRange 0 1))
-            , Fuzz.constant Linear
             ]
         )
 
@@ -524,11 +523,8 @@ rescoreFuzzer =
                 [ DocPackageAttrName
                 , DocOptionName
                 , DocPackagePname
-                , DocPackagePrograms
                 , DocPackageMainProgram
                 , DocPackageAttrSet
-                , DocServicePackage
-                , DocServicePackages
                 ]
             )
         )
