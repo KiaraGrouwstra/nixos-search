@@ -275,6 +275,14 @@ fuzzyFallbackWeight =
     0.05
 
 
+{-| Fields the index maps without subfields, so the `field.*` pattern that
+`searchFields` pairs every field with resolves to nothing for them.
+-}
+noSubfields : List String
+noSubfields =
+    [ "flake_name" ]
+
+
 searchFields :
     List String
     -> List String
@@ -288,9 +296,13 @@ searchFields positiveWords mainFields fields fuzzyFieldNames =
             fields
                 |> List.concatMap
                     (\( field, score ) ->
-                        [ field ++ "^" ++ String.fromFloat score
-                        , field ++ ".*^" ++ String.fromFloat (score * 0.6)
-                        ]
+                        (field ++ "^" ++ String.fromFloat score)
+                            :: (if List.member field noSubfields then
+                                    []
+
+                                else
+                                    [ field ++ ".*^" ++ String.fromFloat (score * 0.6) ]
+                               )
                     )
 
         queryWordsWildCard : List String
