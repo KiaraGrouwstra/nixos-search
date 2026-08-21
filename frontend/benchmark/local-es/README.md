@@ -41,6 +41,12 @@ reads from the public cluster and `load.mjs` writes to localhost.
     node benchmark/local-es/dump.mjs --index <name> --out <dir>
     node benchmark/local-es/load.mjs --in <dir>
 
+A dump is ninety-odd requests against somebody else's cluster and they do not
+all survive; over a long link a walk can be cut off part-way through. `--resume`
+carries on from what is already on disk, using the cursor recorded on the last
+line rather than a sidecar file that could disagree with it. It is safe to pass
+on a finished dump, where it does nothing.
+
 `load.mjs` rebuilds the index wholesale and refuses to run against one that
 already exists unless given `--force`; there is no incremental mode, because a
 partially refreshed copy would score differently from production and the point

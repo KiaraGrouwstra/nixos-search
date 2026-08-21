@@ -46,19 +46,23 @@ export function esClient({
     const auth =
         "Basic " + Buffer.from(`${username}:${password}`).toString("base64");
 
-    async function request(path, body, contentType) {
+    async function request(path, { method = "POST", body, contentType } = {}) {
         let lastErr;
         for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
             try {
                 const resp = await fetch(`${url}${path}`, {
-                    method: "POST",
+                    method,
                     headers: {
-                        "Content-Type": contentType,
+                        ...(contentType && { "Content-Type": contentType }),
                         Authorization: auth,
                     },
                     body,
                 });
-                if (resp.ok) return resp.json();
+                // Awaited, not returned: a socket that dies part-way through a
+                // large response body rejects here rather than at the `fetch`,
+                // and `return resp.json()` would settle outside this `try` and
+                // escape the retry entirely.
+                if (resp.ok) return await resp.json();
                 const text = await resp.text();
                 // Non-retryable (e.g. auth/query errors): fail immediately.
                 if (!RETRYABLE_STATUS.has(resp.status)) {
@@ -89,13 +93,23 @@ export function esClient({
     return {
         index,
 
+        /**
+         * A plain GET, for the metadata endpoints that take no body.
+         *
+         * Unlike the rest of this client the path is not index-scoped, because
+         * `_settings` and `_mapping` are read by index name rather than
+         * queried.
+         */
+        get(path) {
+            return request(path, { method: "GET" });
+        },
+
         /** One request body, one response. */
         search(bodyJson) {
-            return request(
-                `/${index}/_search`,
-                bodyJson,
-                "application/json",
-            );
+            return request(`/${index}/_search`, {
+                body: bodyJson,
+                contentType: "application/json",
+            });
         },
 
         /**
@@ -111,11 +125,10 @@ export function esClient({
             if (bodyJsons.length === 0) return [];
             const ndjson =
                 bodyJsons.map((body) => `{}\n${body}`).join("\n") + "\n";
-            const data = await request(
-                `/${index}/_msearch`,
-                ndjson,
-                "application/x-ndjson",
-            );
+            const data = await request(`/${index}/_msearch`, {
+                body: ndjson,
+                contentType: "application/x-ndjson",
+            });
             return data.responses.map((response, i) => {
                 if (response.error) {
                     throw new Error(
