@@ -1,16 +1,56 @@
-module Search.Query exposing (optionsBody, packagesBody, platforms)
+module Search.Query exposing (defaultOptionsShape, defaultPackagesShape, optionsBody, packagesBody, platforms)
 
 {-| Single source of truth for the Elasticsearch query the client sends.
 
-Ranking relevant hyperparameters should always be added to this file.
+The query has two halves, and this module owns the boundary between them.
 
-Further consumers may add filtering aspects. Which does not affect ranking quality.
+**Ranking** is `defaultPackagesShape` and `defaultOptionsShape`, expressed in
+the `Search.QueryShape` AST. Every clause that decides the _order_ of the
+results lives there, and every constant it is tuned by is a value in that data
+rather than a literal buried in an encoder - which is what lets
+`benchmark/evolve` search for a better shape and what lets the benchmark score a
+candidate without a recompile.
+
+**Filtering** is everything else in this module: `from`, `size`, `sort`, the
+aggregations that back the sidebar, the `type` and bucket filters, and the
+`must_not` that honours `-word`. Those decide membership, not order, so they are
+not part of the shape and not something the search is allowed to touch.
+
+Ranking relevant hyperparameters should always be added to the shapes, so that
+they are searched rather than guessed.
 
 -}
 
 import Json.Encode
-import List.Extra
 import Search exposing (Sort(..), Terms)
+import Search.QueryShape as QueryShape
+    exposing
+        ( Analyzer(..)
+        , Boost
+        , Clause(..)
+        , ClauseName(..)
+        , Context
+        , DocValueField(..)
+        , EdgeSub(..)
+        , EdgedField(..)
+        , FieldRef(..)
+        , Fuzziness(..)
+        , Glue(..)
+        , KeywordTarget(..)
+        , MultiMatchKind(..)
+        , Nonempty(..)
+        , Operator(..)
+        , PathField(..)
+        , PathKwSub(..)
+        , PathSub(..)
+        , PlainField(..)
+        , RankFeatureField(..)
+        , RankFeatureFn(..)
+        , RescoreFn(..)
+        , Shape
+        , Term(..)
+        , Wrap(..)
+        )
 
 
 platforms : List String
@@ -86,22 +126,8 @@ packagesBody query from size sort selectedBuckets =
         [ "package_pversion" ]
         terms
         filterByBuckets
-        [ "package_attr_name" ]
-        [ ( "package_attr_name", 9.0 )
-        , ( "package_programs", 9.0 )
-        , ( "package_mainProgram", 9.0 )
-        , ( "package_pname", 6.0 )
-        , ( "package_description", 1.3 )
-        , ( "package_longDescription", 1.0 )
-        , ( "flake_name", 0.5 )
-        ]
-        [ "package_attr_name", "package_pname", "package_programs", "package_mainProgram" ]
-        [ "package_description^3", "package_longDescription^1" ]
-        Nothing
-        [ { field = "package_repology_repos", pivot = 20.0 }
-        , { field = "package_dep_count", pivot = 1000.0 }
-        ]
-        (Just "package_attr_name")
+        defaultPackagesShape
+        [ KwAttrName KwBase ]
 
 
 filterByBucket : String -> String -> List ( String, Json.Encode.Value )
@@ -137,18 +163,397 @@ optionsBody types query from size sort =
         []
         []
         []
-        [ "option_name" ]
-        [ ( "option_name", 6.0 )
-        , ( "option_description", 1.0 )
-        , ( "flake_name", 0.5 )
-        , ( "service_package", 3.0 )
-        , ( "service_packages", 3.0 )
-        ]
-        [ "option_name", "service_package", "service_packages" ]
-        [ "option_description^3" ]
-        (Just "option_name.attr_path_reverse")
-        []
-        Nothing
+        defaultOptionsShape
+        [ KwOptionName KwBase ]
+
+
+
+-- THE SHAPES
+--
+-- These are the two points the relevance benchmark scores, and the two starting
+-- points `benchmark/evolve` searches out from. Changing a number here changes
+-- the ranking, so it should come with a benchmark delta.
+
+
+{-| How a package query is ranked.
+
+Reading it top to bottom: a hit has to match the words somehow (`must`), and
+then a stack of `should` clauses says which of the matches deserve to be first -
+an exact attribute name above a prefix of one, a description phrase above a
+scattering of the same words, a widely packaged program above an obscure one.
+The rescore pass then breaks the remaining ties toward shorter names.
+
+-}
+defaultPackagesShape : Shape
+defaultPackagesShape =
+    let
+        searchedFields : List ( FieldRef, Boost )
+        searchedFields =
+            List.concat
+                [ pathFieldWeights PackageAttrName 9.0
+                , edgedFieldWeights PackagePrograms 9.0
+                , edgedFieldWeights PackageMainProgram 9.0
+                , edgedFieldWeights PackagePname 6.0
+                , edgedFieldWeights PackageDescription 1.3
+                , edgedFieldWeights PackageLongDescription 1.0
+                , plainFieldWeights FlakeName 0.5
+                ]
+
+        fuzzyFields : List ( FieldRef, Boost )
+        fuzzyFields =
+            fuzzyFallbackWeights
+                [ ( Path PackageAttrName PathBase, 9.0 )
+                , ( Edged PackagePrograms EdgeBase, 9.0 )
+                , ( Edged PackageMainProgram EdgeBase, 9.0 )
+                , ( Edged PackagePname EdgeBase, 6.0 )
+                ]
+    in
+    { must =
+        Nonempty
+            (anyOf (crossFieldsClause searchedFields)
+                [ fuzzyClause fuzzyFields
+                , substringClause (KwAttrName KwBase)
+                ]
+            )
+            []
+    , should =
+        exactNameClauses (KwAttrName KwBase)
+            ++ [ phraseClause
+                    [ ( Edged PackageDescription EdgeBase, QueryShape.boost 3.0 )
+                    , ( Edged PackageLongDescription EdgeBase, QueryShape.boost 1.0 )
+                    ]
+               , popularityClause PackageRepologyRepos 20.0
+               , popularityClause PackageDepCount 1000.0
+               ]
+    , minimumShouldMatch = Nothing
+    , rescore =
+        Just
+            { windowSize = 100
+            , weight = QueryShape.boost 20.0
+            , fn = InverseFieldLength DocPackageAttrName
+            }
+    }
+
+
+{-| How an option query is ranked.
+
+The same skeleton as the package shape, with two differences that follow from
+what an option name is. There is no popularity signal and no shortest-name
+rescore, because option names are a hierarchy rather than a namespace of
+competing packages. In exchange there are the two entry-point clauses: a query
+like `postgresql` almost always means `services.postgresql.enable`, which
+`attr_path_reverse` reaches by matching the path from its leaf inwards.
+
+-}
+defaultOptionsShape : Shape
+defaultOptionsShape =
+    let
+        searchedFields : List ( FieldRef, Boost )
+        searchedFields =
+            List.concat
+                [ pathFieldWeights OptionName 6.0
+                , edgedFieldWeights OptionDescription 1.0
+                , plainFieldWeights FlakeName 0.5
+                , edgedFieldWeights ServicePackage 3.0
+                , edgedFieldWeights ServicePackages 3.0
+                ]
+
+        fuzzyFields : List ( FieldRef, Boost )
+        fuzzyFields =
+            fuzzyFallbackWeights
+                [ ( Path OptionName PathBase, 6.0 )
+                , ( Edged ServicePackage EdgeBase, 3.0 )
+                , ( Edged ServicePackages EdgeBase, 3.0 )
+                ]
+    in
+    { must =
+        Nonempty
+            (anyOf (crossFieldsClause searchedFields)
+                [ fuzzyClause fuzzyFields
+                , substringClause (KwOptionName KwBase)
+                ]
+            )
+            []
+    , should =
+        exactNameClauses (KwOptionName KwBase)
+            ++ [ phraseClause [ ( Edged OptionDescription EdgeBase, QueryShape.boost 3.0 ) ]
+               , entryPointClause
+               , enableLeafClause
+               ]
+    , minimumShouldMatch = Nothing
+    , rescore = Nothing
+    }
+
+
+
+-- CLAUSES THE TWO SHAPES SHARE
+
+
+{-| Score a hit by its best-matching branch, plus a share of each of the others.
+
+The branches are alternative ways of reading the same query - as words across
+the indexed fields, as words a typo away from them, as a substring of a name -
+so summing them would reward a hit for being found three ways rather than for
+being the right hit. `dis_max` takes the best reading instead, and
+`tie_breaker` keeps the others from counting for nothing at all.
+
+-}
+anyOf : Clause -> List Clause -> Clause
+anyOf first rest =
+    DisMax
+        { tieBreaker = Just (QueryShape.unit 0.7)
+        , queries = Nonempty first rest
+        , boost = Nothing
+        }
+
+
+{-| The main clause: every query word has to appear, but not necessarily in the
+same field.
+
+`cross_fields` is what makes `firefox esr` work when `firefox` is the name and
+`esr` is in the description. The `whitespace` analyzer keeps the query's
+punctuation and case, since an attribute name is not English and stemming it
+does more harm than good.
+
+-}
+crossFieldsClause : List ( FieldRef, Boost ) -> Clause
+crossFieldsClause fields =
+    MultiMatch
+        { kind = CrossFields
+        , term = Whole
+        , analyzer = Just Whitespace
+        , autoGenerateSynonymsPhraseQuery = Just False
+        , fuzziness = Nothing
+        , prefixLength = Nothing
+        , operator = Just And
+        , minimumShouldMatch = Nothing
+        , name = NamedWithWords "multi_match_"
+        , fields = fields
+        , boost = Nothing
+        }
+
+
+{-| The same query one edit away, so a typo still finds something.
+
+It is weighted far below the exact clause - see `fuzzyFallbackWeights` - because
+it should decide the ranking only when nothing matched properly. `prefix_length`
+of 1 keeps the first character fixed, which is both much cheaper and a good
+approximation of how people mistype.
+
+-}
+fuzzyClause : List ( FieldRef, Boost ) -> Clause
+fuzzyClause fields =
+    MultiMatch
+        { kind = BestFields
+        , term = Whole
+        , analyzer = Nothing
+        , autoGenerateSynonymsPhraseQuery = Nothing
+        , fuzziness = Just (Edits 1)
+        , prefixLength = Just 1
+        , operator = Just And
+        , minimumShouldMatch = Nothing
+        , name = NamedWithWords "fuzzy_"
+        , fields = fields
+        , boost = Nothing
+        }
+
+
+{-| Each query word as a substring of the name, so `sql` finds `postgresql`.
+
+No analysed field can do this - they match whole tokens - so it takes a
+`wildcard` against the keyword itself.
+
+-}
+substringClause : KeywordTarget -> Clause
+substringClause target =
+    WildcardQ
+        { target = target
+        , term = PerWord { variants = True, wrap = Surround }
+        , boost = Nothing
+        , caseInsensitive = Just True
+        , name = Unnamed
+        }
+
+
+{-| The name typed exactly, and the name typed as far as the user got.
+
+Both are worth a lot: someone who types an attribute name wants that attribute,
+not the thirty packages that mention it. The prefix clause is worth less than
+the exact one so that `git` outranks `gitFull` without hiding it.
+
+The three clauses of each are the three ways a multi-word query can spell one
+name; `Search.QueryShape` collapses them back to one where they coincide, which
+is every single-word query.
+
+-}
+exactNameClauses : KeywordTarget -> List Clause
+exactNameClauses target =
+    let
+        spellings : List Term
+        spellings =
+            List.map Glued [ Concat, Dash, Underscore ]
+    in
+    List.map
+        (\term ->
+            TermQ
+                { target = target
+                , term = term
+                , boost = Just (QueryShape.boost 100.0)
+                , caseInsensitive = Nothing
+                , name = Unnamed
+                }
+        )
+        spellings
+        ++ List.map
+            (\term ->
+                PrefixQ
+                    { target = target
+                    , term = term
+                    , boost = Just (QueryShape.boost 20.0)
+                    , caseInsensitive = Just True
+                    , name = Unnamed
+                    }
+            )
+            spellings
+
+
+{-| The whole query as a phrase in the descriptions.
+
+`constant_score` because what matters is that the words appear together in that
+order at all; how often they do says nothing about which package the user meant.
+Single-word queries skip it, since a one-word phrase is just the word and the
+main clause has already scored it.
+
+-}
+phraseClause : List ( FieldRef, Boost ) -> Clause
+phraseClause fields =
+    ConstantScore
+        { filter =
+            MultiMatch
+                { kind = Phrase
+                , term = MultiWordWhole
+                , analyzer = Nothing
+                , autoGenerateSynonymsPhraseQuery = Nothing
+                , fuzziness = Nothing
+                , prefixLength = Nothing
+                , operator = Nothing
+                , minimumShouldMatch = Nothing
+                , name = Unnamed
+                , fields = fields
+                , boost = Nothing
+                }
+        , boost = QueryShape.boost 80.0
+        }
+
+
+{-| A popularity signal, saturating at `pivot`.
+
+Saturation is the point: the difference between 1 and 20 repositories packaging
+something says a lot about which one is meant, and the difference between 500
+and 1000 says nothing.
+
+-}
+popularityClause : RankFeatureField -> Float -> Clause
+popularityClause field pivot =
+    RankFeatureQ
+        { field = field
+        , boost = Just (QueryShape.boost 5.0)
+        , name = Named ("popularity_" ++ QueryShape.rankFeatureFieldName field)
+        , fn = Saturation (QueryShape.positive pivot)
+        }
+
+
+{-| The option a query most likely means: the one that switches the module on.
+
+`attr_path_reverse` tokenizes `services.postgresql.enable` from the leaf
+inwards, so the query `postgresql` spelled as `postgresql.enable` matches it
+exactly.
+
+-}
+entryPointClause : Clause
+entryPointClause =
+    TermQ
+        { target = KwOptionName KwAttrPathReverse
+        , term = DottedPlus ".enable"
+        , boost = Just (QueryShape.boost 100.0)
+        , caseInsensitive = Nothing
+        , name = Named "module_entry_point"
+        }
+
+
+{-| Any `enable` option, well below the one the query actually names.
+
+This is the consolation prize for `entryPointClause`: when the exact path does
+not exist, an `enable` option is still more likely to be what was wanted than
+one of the module's settings.
+
+-}
+enableLeafClause : Clause
+enableLeafClause =
+    TermQ
+        { target = KwOptionName KwAttrPathReverse
+        , term = Fixed "enable"
+        , boost = Just (QueryShape.boost 10.0)
+        , caseInsensitive = Nothing
+        , name = Named "module_enable_leaf"
+        }
+
+
+
+-- FIELD WEIGHTS
+
+
+{-| What a field's subfields are worth relative to the field itself.
+
+The `.*` pattern covers the `.edge` n-grams and the attribute-path analyses. A
+match there is a weaker signal than a match on the field proper - an edge n-gram
+of `postgresql` matches `post` - so it is scored below it.
+
+-}
+subfieldWeight : Float
+subfieldWeight =
+    0.6
+
+
+{-| Scales the field weights of the fuzzy clause down to a fallback.
+-}
+fuzzyFallbackWeight : Float
+fuzzyFallbackWeight =
+    0.05
+
+
+fuzzyFallbackWeights : List ( FieldRef, Float ) -> List ( FieldRef, Boost )
+fuzzyFallbackWeights =
+    List.map (Tuple.mapSecond (\score -> QueryShape.boost (score * fuzzyFallbackWeight)))
+
+
+{-| An attribute-path field and the `.*` pattern covering its subfields.
+-}
+pathFieldWeights : PathField -> Float -> List ( FieldRef, Boost )
+pathFieldWeights field score =
+    [ ( Path field PathBase, QueryShape.boost score )
+    , ( Path field PathAll, QueryShape.boost (score * subfieldWeight) )
+    ]
+
+
+{-| An edge-ngram field and the `.*` pattern covering its `.edge` subfield.
+-}
+edgedFieldWeights : EdgedField -> Float -> List ( FieldRef, Boost )
+edgedFieldWeights field score =
+    [ ( Edged field EdgeBase, QueryShape.boost score )
+    , ( Edged field EdgeAll, QueryShape.boost (score * subfieldWeight) )
+    ]
+
+
+{-| A field with no subfields, so no `.*` pattern - it would resolve to nothing.
+-}
+plainFieldWeights : PlainField -> Float -> List ( FieldRef, Boost )
+plainFieldWeights field score =
+    [ ( Plain field, QueryShape.boost score ) ]
+
+
+
+-- THE ENVELOPE
 
 
 toAggregations :
@@ -268,275 +673,6 @@ filterByType types =
             ]
 
 
-{-| Scales the field weights of the fuzzy clause down to a fallback.
--}
-fuzzyFallbackWeight : Float
-fuzzyFallbackWeight =
-    0.05
-
-
-{-| Fields the index maps without subfields, so the `field.*` pattern that
-`searchFields` pairs every field with resolves to nothing for them.
--}
-noSubfields : List String
-noSubfields =
-    [ "flake_name" ]
-
-
-searchFields :
-    List String
-    -> List String
-    -> List ( String, Float )
-    -> List String
-    -> List (List ( String, Json.Encode.Value ))
-searchFields positiveWords mainFields fields fuzzyFieldNames =
-    let
-        allFields : List String
-        allFields =
-            fields
-                |> List.concatMap
-                    (\( field, score ) ->
-                        (field ++ "^" ++ String.fromFloat score)
-                            :: (if List.member field noSubfields then
-                                    []
-
-                                else
-                                    [ field ++ ".*^" ++ String.fromFloat (score * 0.6) ]
-                               )
-                    )
-
-        queryWordsWildCard : List String
-        queryWordsWildCard =
-            positiveWords
-                |> List.concatMap dashUnderscoreVariants
-                |> List.Extra.unique
-
-        multiMatch : List ( String, Json.Encode.Value )
-        multiMatch =
-            [ ( "multi_match"
-              , Json.Encode.object
-                    [ ( "type", Json.Encode.string "cross_fields" )
-                    , ( "query", Json.Encode.string (String.join " " positiveWords) )
-                    , ( "analyzer", Json.Encode.string "whitespace" )
-                    , ( "auto_generate_synonyms_phrase_query", Json.Encode.bool False )
-                    , ( "operator", Json.Encode.string "and" )
-                    , ( "_name", Json.Encode.string <| "multi_match_" ++ String.join "_" positiveWords )
-                    , ( "fields", Json.Encode.list Json.Encode.string allFields )
-                    ]
-              )
-            ]
-
-        fuzzyFields : List String
-        fuzzyFields =
-            fields
-                |> List.filter (\( field, _ ) -> List.member field fuzzyFieldNames)
-                |> List.map
-                    (\( field, score ) ->
-                        field ++ "^" ++ String.fromFloat (score * fuzzyFallbackWeight)
-                    )
-
-        fuzzyMatch : List (List ( String, Json.Encode.Value ))
-        fuzzyMatch =
-            if List.isEmpty fuzzyFields then
-                []
-
-            else
-                [ [ ( "multi_match"
-                    , Json.Encode.object
-                        [ ( "type", Json.Encode.string "best_fields" )
-                        , ( "query", Json.Encode.string (String.join " " positiveWords) )
-                        , ( "fuzziness", Json.Encode.string "1" )
-                        , ( "prefix_length", Json.Encode.int 1 )
-                        , ( "operator", Json.Encode.string "and" )
-                        , ( "_name", Json.Encode.string <| "fuzzy_" ++ String.join "_" positiveWords )
-                        , ( "fields", Json.Encode.list Json.Encode.string fuzzyFields )
-                        ]
-                    )
-                  ]
-                ]
-    in
-    multiMatch
-        :: fuzzyMatch
-        ++ List.concatMap (\mf -> List.map (toWildcardQuery mf) queryWordsWildCard) mainFields
-
-
-shouldClauses :
-    String
-    -> List String
-    -> List String
-    -> List (List ( String, Json.Encode.Value ))
-shouldClauses primaryField positiveWords phraseFields =
-    if List.isEmpty positiveWords then
-        []
-
-    else
-        let
-            -- `primaryField` is a keyword, so a multi-word query only reaches an
-            -- attribute name once the words are glued back together. Package names
-            -- separate words with `-` or `_` as often as they concatenate, and no
-            -- analysed field splits those apart, so try all three spellings.
-            joinedVariants : List String
-            joinedVariants =
-                [ String.concat positiveWords
-                , String.join "-" positiveWords
-                , String.join "_" positiveWords
-                ]
-                    |> List.Extra.unique
-
-            termClauses : List (List ( String, Json.Encode.Value ))
-            termClauses =
-                joinedVariants
-                    |> List.map
-                        (\joined ->
-                            [ ( "term"
-                              , Json.Encode.object
-                                    [ ( primaryField
-                                      , Json.Encode.object
-                                            [ ( "value", Json.Encode.string joined )
-                                            , ( "boost", Json.Encode.float 100.0 )
-                                            ]
-                                      )
-                                    ]
-                              )
-                            ]
-                        )
-
-            prefixClauses : List (List ( String, Json.Encode.Value ))
-            prefixClauses =
-                joinedVariants
-                    |> List.map
-                        (\joined ->
-                            [ ( "prefix"
-                              , Json.Encode.object
-                                    [ ( primaryField
-                                      , Json.Encode.object
-                                            [ ( "value", Json.Encode.string joined )
-                                            , ( "boost", Json.Encode.float 20.0 )
-                                            , ( "case_insensitive", Json.Encode.bool True )
-                                            ]
-                                      )
-                                    ]
-                              )
-                            ]
-                        )
-
-            phraseClause : List (List ( String, Json.Encode.Value ))
-            phraseClause =
-                if List.length positiveWords > 1 then
-                    [ [ ( "constant_score"
-                        , Json.Encode.object
-                            [ ( "filter"
-                              , Json.Encode.object
-                                    [ ( "multi_match"
-                                      , Json.Encode.object
-                                            [ ( "type", Json.Encode.string "phrase" )
-                                            , ( "query", Json.Encode.string (String.join " " positiveWords) )
-                                            , ( "fields", Json.Encode.list Json.Encode.string phraseFields )
-                                            ]
-                                      )
-                                    ]
-                              )
-                            , ( "boost", Json.Encode.float 80.0 )
-                            ]
-                        )
-                      ]
-                    ]
-
-                else
-                    []
-        in
-        termClauses ++ prefixClauses ++ phraseClause
-
-
-moduleEntryPoint : String -> List String -> List (List ( String, Json.Encode.Value ))
-moduleEntryPoint field positiveWords =
-    let
-        path : String
-        path =
-            String.join "." positiveWords
-    in
-    if String.isEmpty path then
-        []
-
-    else
-        [ leafTerm field (path ++ ".enable") 100.0 "module_entry_point"
-        , leafTerm field "enable" 10.0 "module_enable_leaf"
-        ]
-
-
-leafTerm : String -> String -> Float -> String -> List ( String, Json.Encode.Value )
-leafTerm field value boost name =
-    [ ( "term"
-      , Json.Encode.object
-            [ ( field
-              , Json.Encode.object
-                    [ ( "value", Json.Encode.string value )
-                    , ( "boost", Json.Encode.float boost )
-                    , ( "_name", Json.Encode.string name )
-                    ]
-              )
-            ]
-      )
-    ]
-
-
-type alias PopularitySignal =
-    { field : String, pivot : Float }
-
-
-popularityClauses : List PopularitySignal -> List (List ( String, Json.Encode.Value ))
-popularityClauses signals =
-    List.map
-        (\{ field, pivot } ->
-            [ ( "rank_feature"
-              , Json.Encode.object
-                    [ ( "field", Json.Encode.string field )
-                    , ( "boost", Json.Encode.float 5.0 )
-                    , ( "_name", Json.Encode.string ("popularity_" ++ field) )
-                    , ( "saturation"
-                      , Json.Encode.object
-                            [ ( "pivot", Json.Encode.float pivot ) ]
-                      )
-                    ]
-              )
-            ]
-        )
-        signals
-
-
-rescoreQuery : String -> ( String, Json.Encode.Value )
-rescoreQuery field =
-    ( "rescore"
-    , Json.Encode.object
-        [ ( "window_size", Json.Encode.int 100 )
-        , ( "query"
-          , Json.Encode.object
-                [ ( "rescore_query"
-                  , Json.Encode.object
-                        [ ( "function_score"
-                          , Json.Encode.object
-                                [ ( "script_score"
-                                  , Json.Encode.object
-                                        [ ( "script"
-                                          , Json.Encode.object
-                                                [ ( "source"
-                                                  , Json.Encode.string ("1.0 / doc['" ++ field ++ "'].value.length()")
-                                                  )
-                                                ]
-                                          )
-                                        ]
-                                  )
-                                ]
-                          )
-                        ]
-                  )
-                , ( "rescore_query_weight", Json.Encode.float 20.0 )
-                ]
-          )
-        ]
-    )
-
-
 encodeRequestBody :
     String
     -> Int
@@ -547,15 +683,10 @@ encodeRequestBody :
     -> List String
     -> List Terms
     -> List ( String, Json.Encode.Value )
-    -> List String
-    -> List ( String, Float )
-    -> List String
-    -> List String
-    -> Maybe String
-    -> List PopularitySignal
-    -> Maybe String
+    -> Shape
+    -> List KeywordTarget
     -> Json.Encode.Value
-encodeRequestBody query from sizeRaw sort types sortField otherSortFields terms filterByBuckets mainFields fields fuzzyFieldNames phraseFields entryPointField popularitySignals rescoreField =
+encodeRequestBody query from sizeRaw sort types sortField otherSortFields terms filterByBuckets shape negatedTargets =
     let
         -- you can not request more then 10000 results otherwise it will return 404
         size =
@@ -571,14 +702,14 @@ encodeRequestBody query from sizeRaw sort types sortField otherSortFields terms 
                 |> List.partition (String.startsWith "-")
                 |> Tuple.mapFirst (List.map (String.dropLeft 1))
 
-        primaryField : String
-        primaryField =
-            List.head mainFields |> Maybe.withDefault ""
+        context : Context
+        context =
+            { positiveWords = positiveWords, negativeWords = negativeWords }
 
         -- only emit `rescore` for the `Relevance` sort.
         rescoreActive : Bool
         rescoreActive =
-            case ( sort, rescoreField ) of
+            case ( sort, shape.rescore ) of
                 ( Relevance, Just _ ) ->
                     True
 
@@ -595,15 +726,6 @@ encodeRequestBody query from sizeRaw sort types sortField otherSortFields terms 
 
             else
                 toSortQuery sort sortField otherSortFields
-
-        entryPointClauses : List (List ( String, Json.Encode.Value ))
-        entryPointClauses =
-            case entryPointField of
-                Just field ->
-                    moduleEntryPoint field positiveWords
-
-                Nothing ->
-                    []
     in
     Json.Encode.object
         ([ ( "from"
@@ -618,8 +740,8 @@ encodeRequestBody query from sizeRaw sort types sortField otherSortFields terms 
            , Json.Encode.object
                 [ ( "bool"
                   , Json.Encode.object
-                        [ ( "filter"
-                          , Json.Encode.list Json.Encode.object
+                        ([ ( "filter"
+                           , Json.Encode.list Json.Encode.object
                                 (List.append
                                     [ filterByType types ]
                                     (if List.isEmpty filterByBuckets then
@@ -629,69 +751,21 @@ encodeRequestBody query from sizeRaw sort types sortField otherSortFields terms 
                                         [ filterByBuckets ]
                                     )
                                 )
-                          )
-                        , ( "must_not"
-                          , Json.Encode.list Json.Encode.object
-                                (negativeWords
-                                    |> List.concatMap dashUnderscoreVariants
-                                    |> List.Extra.unique
-                                    |> List.concatMap (\w -> List.map (\mf -> toWildcardQuery mf w) mainFields)
-                                )
-                          )
-                        , ( "must"
-                          , Json.Encode.list Json.Encode.object
-                                [ [ ( "dis_max"
-                                    , Json.Encode.object
-                                        [ ( "tie_breaker", Json.Encode.float 0.7 )
-                                        , ( "queries"
-                                          , Json.Encode.list Json.Encode.object
-                                                (searchFields positiveWords mainFields fields fuzzyFieldNames)
-                                          )
-                                        ]
-                                    )
-                                  ]
-                                ]
-                          )
-                        , ( "should"
-                          , Json.Encode.list Json.Encode.object
-                                (shouldClauses primaryField positiveWords phraseFields
-                                    ++ entryPointClauses
-                                    ++ popularityClauses popularitySignals
-                                )
-                          )
-                        ]
+                           )
+                         , ( "must_not", QueryShape.negatedWordClauses context negatedTargets )
+                         ]
+                            ++ QueryShape.encode context shape
+                        )
                   )
                 ]
            )
          ]
-            ++ (case ( rescoreActive, rescoreField ) of
-                    ( True, Just field ) ->
-                        [ rescoreQuery field ]
+            ++ (if rescoreActive then
+                    QueryShape.encodeRescore shape
+                        |> Maybe.map List.singleton
+                        |> Maybe.withDefault []
 
-                    _ ->
-                        []
+                else
+                    []
                )
         )
-
-
-dashUnderscoreVariants : String -> List String
-dashUnderscoreVariants word =
-    [ String.replace "_" "-" word
-    , String.replace "-" "_" word
-    , word
-    ]
-
-
-toWildcardQuery : String -> String -> List ( String, Json.Encode.Value )
-toWildcardQuery mainField queryWord =
-    [ ( "wildcard"
-      , Json.Encode.object
-            [ ( mainField
-              , Json.Encode.object
-                    [ ( "value", Json.Encode.string ("*" ++ queryWord ++ "*") )
-                    , ( "case_insensitive", Json.Encode.bool True )
-                    ]
-              )
-            ]
-      )
-    ]
