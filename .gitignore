@@ -1,4 +1,7 @@
 frontend/public/autocomplete/
+# `benchmark/local-es/dump.mjs` output and the cluster `local-es` serves it from
+frontend/benchmark/local-es/dump/
+frontend/benchmark/local-es/data/
 *.log
 .DS_Store
 .cache

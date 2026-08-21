@@ -161,6 +161,10 @@
             };
             nixosChannels = nixosChannelsFile;
             nixosChannelsJson = pkgs.writeText "nixosChannels.json" (lib.toJSON nixosChannels);
+            elasticsearch-oss = pkgs.callPackage ./nix/elasticsearch-oss.nix { };
+            local-es = pkgs.callPackage ./nix/local-es.nix {
+              inherit (packages) elasticsearch-oss;
+            };
           };
 
           checks = {
@@ -217,10 +221,18 @@
             };
           };
 
-          apps.opensearch-vm = {
-            type = "app";
-            program = "${inputs.self.nixosConfigurations.opensearch-vm.config.system.build.vm}/bin/run-nixos-vm";
-            meta.description = "Run OpenSearch on port 9200 in an ephemeral VM for local testing";
+          apps = {
+            opensearch-vm = {
+              type = "app";
+              program = "${inputs.self.nixosConfigurations.opensearch-vm.config.system.build.vm}/bin/run-nixos-vm";
+              meta.description = "Run OpenSearch on port 9200 in an ephemeral VM for local testing";
+            };
+
+            local-es = {
+              type = "app";
+              program = lib.getExe packages.local-es;
+              inherit (packages.local-es) meta;
+            };
           };
         };
     };
