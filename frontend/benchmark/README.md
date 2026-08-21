@@ -178,6 +178,21 @@ the search only ever selects on the 70, scores the 30 every generation, and
 accepts a champion only if it beats the incumbent there too. The exit status says
 which happened.
 
+That split is drawn from `--seed`, so two runs seeded differently partition the
+queries differently and their fitness numbers cannot be compared to each other -
+they are not measured against the same test set. What compares them is the
+report, which scores a champion over every curated query against the index the
+app really answers from:
+
+```
+node benchmark/run.mjs --index <pinned index> --shape evolve/champion-options.json
+```
+
+One `--shape` per track, and a track left unnamed keeps the shape the app ships,
+so scoring a candidate for one track does not disturb the other's figures. Those
+numbers are the generous ones - they include the queries the search selected on -
+so they belong beside the held-out figure rather than in place of it.
+
 Two properties of the fitness are worth keeping in mind when reading a result.
 RBP's denominator is the page actually returned, so a candidate can raise it by
 answering fewer queries - which is what the hard `Success@10` floor, set at the

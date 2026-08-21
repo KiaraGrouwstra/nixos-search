@@ -5,7 +5,7 @@
  * scores curated queries against our live ES instance.
  *
  * Usage:
- *   node benchmark/run.mjs [--packages <path>] [--options <path>] [--channel <branch>] [--schema <n>] [--index <name>] [--k <n>] [--persistence <f>] [--json] [--msearch <n>] [--cache <path>]
+ *   node benchmark/run.mjs [--packages <path>] [--options <path>] [--channel <branch>] [--schema <n>] [--index <name>] [--k <n>] [--persistence <f>] [--json] [--msearch <n>] [--cache <path>] [--shape <path>]
  *
  * `--index` names a concrete index instead of the `latest-<schema>-<channel>`
  * alias, which pins an A/B to one nixpkgs evaluation once the alias has moved
@@ -21,6 +21,12 @@
  *
  * `--cache <path>` reuses the answer to any request body already seen at this
  * index, which is what makes repeated A/Bs cheap.
+ *
+ * `--shape <path>` scores a champion file from `evolve/` instead of the shape
+ * the app ships, once per track. A search reports fitness against its own
+ * train/test split, so runs seeded differently cannot be compared to each other
+ * by those numbers; this report, over every curated query, is what puts a
+ * candidate and the incumbent on the same footing.
  *
  * The metric definitions, the category weights, and the Elasticsearch client all
  * live in `lib/`, shared with `evolve/` - a search that optimized a metric this
@@ -91,6 +97,7 @@ const { values: args } = parseArgs({
         json: { type: "boolean", default: false },
         msearch: { type: "string" },
         cache: { type: "string" },
+        shape: { type: "string", multiple: true, default: [] },
     },
     strict: false,
 });
@@ -105,6 +112,30 @@ const BATCH = args.msearch ? parseInt(args.msearch, 10) : 1;
 const es = esClient({ ...esConfigFromEnv(), index: INDEX });
 const cache = args.cache ? openCache(args.cache) : null;
 const worker = bootWorker({ label: "benchmark" });
+
+/**
+ * Score a shape the app does not ship, given as a champion file per track.
+ *
+ * This is how a candidate is put on the same footing as the incumbent. A
+ * search reports fitness against its own train/test split, so two searches
+ * seeded differently cannot be compared to each other by those numbers at all;
+ * what compares them is this report, over every curated query, against the
+ * index the app really answers from.
+ *
+ * A track left unnamed keeps its shipped shape, so scoring one track's
+ * candidate does not disturb the other's figures.
+ */
+const SHAPES = {};
+for (const path of args.shape) {
+    const saved = JSON.parse(readFileSync(path, "utf8"));
+    if (saved.track !== "packages" && saved.track !== "options") {
+        throw new Error(`${path}: no "track" saying which shape this is`);
+    }
+    if (SHAPES[saved.track]) {
+        throw new Error(`two shapes given for ${saved.track}; only one can be scored`);
+    }
+    SHAPES[saved.track] = saved.shape;
+}
 
 /**
  * The pages for a list of request bodies, as `rankHits` reads them.
@@ -152,6 +183,7 @@ async function scoreTrack(queries, bodyKey, field, prefix) {
     const rendered = await worker.bodiesFor(
         queries.map((q) => q.q),
         K,
+        SHAPES,
     );
     const pages = await pagesFor(
         rendered.map((bodies) => bodies[bodyKey]),
@@ -226,6 +258,7 @@ if (args.json) {
                 index: INDEX,
                 k: K,
                 persistence: P,
+                shapes: args.shape,
                 packages: {
                     overall: aggregate(pkgResults, WEIGHTS.packages),
                     queries: pkgResults,
@@ -427,6 +460,14 @@ const lines = [
     "",
     `> Index: \`${INDEX}\`, k=${K}. Metric definitions are in the footnotes.`,
     "",
+    // Without this a report of a candidate and a report of the incumbent are
+    // two files of numbers with nothing on them saying which is which.
+    ...(args.shape.length > 0
+        ? [
+              `> Scoring ${args.shape.map((p) => `\`${p}\``).join(" and ")} rather than the shape the app ships.`,
+              "",
+          ]
+        : []),
     ...section("Packages", pkgResults, WEIGHTS.packages),
     ...section("Options", optResults, WEIGHTS.options),
     "<details>",
