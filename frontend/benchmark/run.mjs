@@ -348,7 +348,7 @@ function section(label, results, weights) {
         "",
         `> Weighted by category, so the figures track the query mix real users
          type rather than the mix we happened to curate. The weights and where
-         they come from are in \`WEIGHTS\` in \`run.mjs\`.`.replace(/\s+/g, " "),
+         they come from are in \`WEIGHTS\` in \`lib/weights.mjs\`.`.replace(/\s+/g, " "),
         "",
         table(
             ["metric", "value", metric("n")],

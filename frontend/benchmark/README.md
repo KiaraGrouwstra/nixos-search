@@ -6,9 +6,18 @@ builds - against the deployed index, over two curated query files:
 - `queries-packages.json`, scored against `package_attr_name`
 - `queries-options.json`, scored against `option_name`
 
-Run it with `npm --prefix frontend run benchmark`. It prints a markdown report;
-the metric definitions are footnotes at the bottom of that report, and the query
-file format is documented at the top of `run.mjs`.
+Run it with `npm --prefix frontend run benchmark`. It prints a markdown report,
+or the same numbers as JSON with `--json`; the metric definitions are footnotes
+at the bottom of that report, and the query file format is documented at the top
+of `run.mjs`.
+
+`run.mjs` is the report. What it reports on is shared with everything else here:
+`lib/metrics.mjs` holds every metric, `lib/weights.mjs` the category weights,
+`lib/es.mjs` the Elasticsearch client and its `_msearch` batching, `lib/cache.mjs`
+an on-disk cache of results keyed by index and body, and `lib/worker.mjs` the
+compiled `Benchmark.elm` that turns a query into the body the browser would send.
+One definition each, so a search cannot be tuned against a metric the report does
+not print.
 
 ## The aggregate is weighted by category
 
@@ -19,7 +28,8 @@ are far apart. The curated files were 37:63 packages-to-options where real
 traffic is 64:35, and had no attribute-path package queries at all against an
 observed 6.2%.
 
-So each `(track, category)` pair carries a weight in `WEIGHTS` in `run.mjs`, and
+So each `(track, category)` pair carries a weight in `WEIGHTS` in
+`lib/weights.mjs`, and
 the six `Overall` figures are weighted means over the per-category means. The
 `By category` table stays unweighted - a category's mean is what it is - and
 carries a `weight` column showing how `Overall` was composed.
@@ -120,6 +130,75 @@ adding a query never renumbers an existing one:
 A query that appears in both files carries the same id in both, which is what
 pairs the `pkg` and `opt` rows for one query in the per-query table. Two
 different queries must never share an id.
+
+## The query is a value, and it was searched for
+
+`Search/QueryShape.elm` is the ranking half of the Elasticsearch query as a
+type: which clauses, over which fields, at which boosts. The envelope around it -
+`from`, `size`, `sort`, the aggregations, the `type` and bucket filters, the
+`must_not` for negated words - stays in `Search/Query.elm` and is not part of the
+shape, matching that module's split between ranking and filtering.
+
+The type is built so that only valid, sensible queries are representable. Fields
+are enums drawn from the live mapping, with subfields attached to the field that
+has them, so there is no way to name `package_description.attr_path`. Boosts are
+a newtype with a clamping constructor, so an out-of-range boost is not
+constructible. `DisMax.queries` is non-empty by construction. The query text is a
+hole rather than a string - `Whole`, `Glued Dash`, `LastWord`, `DottedPlus
+".enable"` and so on - so no clause can be handed a literal the user did not type
+except through `Fixed`.
+
+`defaultPackagesShape` and `defaultOptionsShape` in `Search/Query.elm` are what
+the app ships with. They were not chosen by hand: `evolve/` searched for them.
+
+- `evolve/grammar.mjs` is the JS mirror of the Elm type - node kinds, their
+  parameters, value domains, and the per-track field pool. `QueryShape.decoder`
+  is what keeps it honest: a genome the decoder rejects is a grammar bug, and it
+  fails loudly rather than scoring badly.
+- `evolve/ops.mjs` mutates and crosses over within the grammar.
+- `evolve/fitness.mjs` renders candidates through the same Elm the browser runs,
+  `_msearch`es them, and scores `0.8 * nDCG@10 + 0.2 * RBP(p=0.8)`,
+  category-weighted, minus a parsimony term on node count.
+- `evolve/evolve.mjs` runs the search.
+- `evolve/to-elm.mjs` renders a champion as the Elm literal to paste back.
+
+```
+node benchmark/evolve/evolve.mjs --track packages --index <pinned index> \
+    --pop 60 --hours 10 --seed 1 --cache /var/tmp/evolve.ndjson
+```
+
+`--index` is required and an alias will not do: a fitness function that changes
+underneath a running search is not one. Checkpoints are written every generation
+and `--resume` picks one up. `--seed` is enough to repeat a run, since every draw
+and every operator takes its randomness as an argument.
+
+**The number to read is the held-out one.** 351 curated queries against a ranking
+with dozens of movable parameters will overfit. Each category is split 70/30;
+the search only ever selects on the 70, scores the 30 every generation, and
+accepts a champion only if it beats the incumbent there too. The exit status says
+which happened.
+
+Two properties of the fitness are worth keeping in mind when reading a result.
+RBP's denominator is the page actually returned, so a candidate can raise it by
+answering fewer queries - which is what the hard `Success@10` floor, set at the
+incumbent's own reach, is there to forbid. And RBP is only defined for
+`exhaustive` queries, 52 of 138 packages and 124 of 213 options, so that 0.2
+slice is decided by a subset.
+
+## Proving a shape change did not change the query
+
+```
+node benchmark/check-shape.mjs --reference HEAD~1
+node benchmark/check-shape.mjs --shape benchmark/evolve/champion-packages.json
+```
+
+Both compare request bodies byte-for-byte over every curated query, with no
+Elasticsearch involved - it is the encoder under test. The first is for
+refactoring `Search/Query.elm` or `Search/QueryShape.elm`, where the bodies must
+not move at all. The second is the guard against codegen drift: `to-elm.mjs`
+transcribes JSON into Elm through hand-maintained name tables, and this is what
+fails when a table is wrong or the literal is later edited away from the JSON it
+came from.
 
 ## Adding a category
 
