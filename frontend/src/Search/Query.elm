@@ -137,9 +137,8 @@ optionsBody types query from size sort =
         []
         []
         []
-        [ "option_name", "option_name_query" ]
+        [ "option_name" ]
         [ ( "option_name", 6.0 )
-        , ( "option_name_query", 6.0 )
         , ( "option_description", 1.0 )
         , ( "flake_name", 0.5 )
         , ( "service_package", 3.0 )
