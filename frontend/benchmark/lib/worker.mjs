@@ -56,13 +56,16 @@ export function bootWorker({
     const batched = "sendBatch" in app.ports;
 
     /**
-     * Render bodies for a list of queries.
+     * Render a batch.
      *
      * `shapes` is `{ packages, options }` of shape JSON, either omitted or
-     * `null` for the default the app ships with. Returns one
-     * `{ packages, options }` of body JSON per query, in order.
+     * `null` for the default the app ships with. Returns `{ bodies, shapes }`:
+     * one `{ packages, options }` of body JSON per query in order, and the
+     * shapes that ranked them as `QueryShape.decoder` read them - which is the
+     * incumbent when nothing was overridden, and the canonical form of the
+     * override otherwise.
      */
-    function bodiesFor(queries, k, shapes = {}) {
+    async function render(queries, k, shapes = {}) {
         const { packages = null, options = null } = shapes ?? {};
         if (!batched) {
             if (packages || options) {
@@ -70,13 +73,13 @@ export function bootWorker({
                     `${label}: this revision's worker predates shape overrides`,
                 );
             }
-            return legacyBodiesFor(app, queries, k);
+            return { bodies: await legacyBodiesFor(app, queries, k), shapes: null };
         }
         return new Promise((resolve, reject) => {
-            const once = ({ bodies, error }) => {
+            const once = (reply) => {
                 app.ports.gotBodies.unsubscribe(once);
-                if (error) reject(new Error(`${label}: ${error}`));
-                else resolve(bodies);
+                if (reply.error) reject(new Error(`${label}: ${reply.error}`));
+                else resolve(reply);
             };
             app.ports.gotBodies.subscribe(once);
             app.ports.sendBatch.send({
@@ -89,7 +92,27 @@ export function bootWorker({
     }
 
     return {
-        bodiesFor,
+        render,
+
+        /** `render`, for the callers that only want the bodies. */
+        async bodiesFor(queries, k, shapes = {}) {
+            return (await render(queries, k, shapes)).bodies;
+        },
+
+        /**
+         * The shapes the app ships with, as JSON.
+         *
+         * A shape search seeds generation 0 from these, so the search starts
+         * from the incumbent and can only report an improvement on it.
+         */
+        async defaultShapes() {
+            const { shapes } = await render([], 1);
+            return {
+                packages: JSON.parse(shapes.packages),
+                options: JSON.parse(shapes.options),
+            };
+        },
+
         cleanup: () => rmSync(outDir, { recursive: true, force: true }),
     };
 }

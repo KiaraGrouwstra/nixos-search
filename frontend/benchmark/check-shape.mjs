@@ -10,15 +10,25 @@
  * something.
  *
  * So this compares, for every curated benchmark query, the body the working
- * tree produces against the body a reference git revision produces. No
- * Elasticsearch involved - it is the encoder that is under test.
+ * tree produces against a reference body. No Elasticsearch involved - it is the
+ * encoder that is under test. There are two references worth checking against:
  *
  *     node benchmark/check-shape.mjs --reference HEAD~1
  *
- * Use it whenever `Search/Query.elm` or `Search/QueryShape.elm` is refactored
- * rather than retuned. A run that reports a difference is either a bug or a
- * deliberate ranking change - and if it is deliberate, the benchmark report is
- * the thing that has to justify it.
+ * a git revision, for whenever `Search/Query.elm` or `Search/QueryShape.elm` is
+ * refactored rather than retuned; and
+ *
+ *     node benchmark/check-shape.mjs --shape benchmark/evolve/champion-packages.json
+ *
+ * a committed champion, for the shape a search chose. That one is the guard
+ * against codegen drift: `evolve/to-elm.mjs` turns the JSON into the Elm literal
+ * in `Query.elm` by hand-maintained name tables, and this is what fails when one
+ * of those tables is wrong or when the literal is later edited away from the
+ * JSON it is supposed to be. Both belong in CI.
+ *
+ * A run that reports a difference is either a bug or a deliberate ranking change
+ * - and if it is deliberate, the benchmark report is the thing that has to
+ * justify it.
  */
 
 import { execFileSync } from "node:child_process";
@@ -46,6 +56,7 @@ const { values: args } = parseArgs({
             default: join(__dirname, "queries-options.json"),
         },
         reference: { type: "string", default: "HEAD" },
+        shape: { type: "string", multiple: true, default: [] },
         k: { type: "string", default: "10" },
     },
     strict: true,
@@ -88,42 +99,60 @@ const queries = [
     "",
 ];
 
-const referenceDir = checkoutFrontend(args.reference);
-const reference = bootWorker({ sourceDir: referenceDir, label: "reference" });
 const current = bootWorker({ sourceDir: FRONTEND_DIR, label: "current" });
-
-const [wasAll, isAll] = await Promise.all([
-    reference.bodiesFor(queries, K),
-    current.bodiesFor(queries, K),
-]);
+const isAll = await current.bodiesFor(queries, K);
 
 let differing = 0;
-for (const [i, query] of queries.entries()) {
-    const was = wasAll[i];
-    const is = isAll[i];
-    for (const track of ["packages", "options"]) {
-        if (was[track] === is[track]) continue;
-        differing += 1;
-        if (differing <= 3) {
-            console.error(`\n--- ${track} body differs for ${JSON.stringify(query)}`);
-            console.error(`  ${args.reference}: ${was[track]}`);
-            console.error(`  working tree: ${is[track]}`);
-        }
+let checked = 0;
+
+/** Report one body mismatch, up to a few - the first is nearly always enough. */
+function compare(source, track, query, was, is) {
+    checked += 1;
+    if (was === is) return;
+    differing += 1;
+    if (differing <= 3) {
+        console.error(`\n--- ${track} body differs for ${JSON.stringify(query)}`);
+        console.error(`  ${source}: ${was}`);
+        console.error(`  working tree: ${is}`);
     }
 }
 
-reference.cleanup();
-current.cleanup();
-rmSync(referenceDir, { recursive: true, force: true });
+if (args.shape.length > 0) {
+    // Codegen drift: the Elm literal in `Query.elm` against the champion JSON it
+    // was generated from. Both go through the same worker, so what is compared
+    // is only the transcription.
+    for (const path of args.shape) {
+        const saved = JSON.parse(readFileSync(path, "utf8"));
+        const track = saved.track;
+        if (track !== "packages" && track !== "options") {
+            throw new Error(`${path}: no "track" saying which shape this is`);
+        }
+        const fromJson = await current.bodiesFor(queries, K, { [track]: saved.shape });
+        for (const [i, query] of queries.entries()) {
+            compare(path, track, query, fromJson[i][track], isAll[i][track]);
+        }
+    }
+} else {
+    const referenceDir = checkoutFrontend(args.reference);
+    const reference = bootWorker({ sourceDir: referenceDir, label: "reference" });
+    const wasAll = await reference.bodiesFor(queries, K);
+    for (const [i, query] of queries.entries()) {
+        for (const track of ["packages", "options"]) {
+            compare(args.reference, track, query, wasAll[i][track], isAll[i][track]);
+        }
+    }
+    reference.cleanup();
+    rmSync(referenceDir, { recursive: true, force: true });
+}
 
-const checked = queries.length * 2;
+current.cleanup();
+
+const against = args.shape.length > 0 ? args.shape.join(", ") : args.reference;
 if (differing === 0) {
     console.log(
-        `check-shape: ${checked} bodies identical to ${args.reference} across ${queries.length} queries`,
+        `check-shape: ${checked} bodies identical to ${against} across ${queries.length} queries`,
     );
 } else {
-    console.error(
-        `\ncheck-shape: ${differing} of ${checked} bodies differ from ${args.reference}`,
-    );
+    console.error(`\ncheck-shape: ${differing} of ${checked} bodies differ from ${against}`);
     process.exitCode = 1;
 }
