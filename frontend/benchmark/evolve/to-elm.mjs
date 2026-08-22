@@ -213,7 +213,7 @@ function clauseBody(node) {
 
         case "disMax":
             return record([
-                ["tieBreaker", maybe(node.tieBreaker, (v) => `unit ${float(v)}`)],
+                ["tieBreaker", maybe(node.tieBreaker, (v) => `QueryShape.unit ${float(v)}`)],
                 ["queries", nonempty(node.queries)],
                 ["boost", maybe(node.boost, boost)],
             ]);
@@ -325,11 +325,11 @@ function clauseName(node) {
 function rankFeatureFn(node) {
     switch (node.kind) {
         case "saturation":
-            return `Saturation (positive ${float(node.pivot)})`;
+            return `Saturation (QueryShape.positive ${float(node.pivot)})`;
         case "log":
-            return `Log (positive ${float(node.scalingFactor)})`;
+            return `Log (QueryShape.positive ${float(node.scalingFactor)})`;
         case "sigmoid":
-            return `Sigmoid (positive ${float(node.pivot)}) (unit ${float(node.exponent)})`;
+            return `Sigmoid (QueryShape.positive ${float(node.pivot)}) (QueryShape.unit ${float(node.exponent)})`;
         default:
             throw new Error(`unknown rank_feature function ${node.kind}`);
     }
@@ -351,7 +351,9 @@ const operator = (value) => (value === "and" ? "And" : "Or");
 
 const fuzziness = (value) => (value === "AUTO" ? "Auto" : `(Edits ${parseInt(value, 10)})`);
 
-const boost = (value) => `boost ${float(value)}`;
+// Qualified, because `Query.elm` imports `QueryShape` qualified and exposes only
+// its types. Bare `boost 3.0` would not resolve there.
+const boost = (value) => `QueryShape.boost ${float(value)}`;
 
 const bool = (value) => (value ? "True" : "False");
 

@@ -149,7 +149,10 @@ hole rather than a string - `Whole`, `Glued Dash`, `LastWord`, `DottedPlus
 except through `Fixed`.
 
 `defaultPackagesShape` and `defaultOptionsShape` in `Search/Query.elm` are what
-the app ships with. They were not chosen by hand: `evolve/` searched for them.
+the app ships with. `defaultOptionsShape` was not chosen by hand: `evolve/`
+searched for it, and `evolve/champion-options.json` is the checkpoint it came
+from. `defaultPackagesShape` is still the hand-written one - the searches found
+train-set gains there that did not survive on the held-out queries.
 
 - `evolve/grammar.mjs` is the JS mirror of the Elm type - node kinds, their
   parameters, value domains, and the per-track field pool. `QueryShape.decoder`
@@ -204,7 +207,7 @@ slice is decided by a subset.
 
 ```
 node benchmark/check-shape.mjs --reference HEAD~1
-node benchmark/check-shape.mjs --shape benchmark/evolve/champion-packages.json
+node benchmark/check-shape.mjs --shape benchmark/evolve/champion-options.json
 ```
 
 Both compare request bodies byte-for-byte over every curated query, with no

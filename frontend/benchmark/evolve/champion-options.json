@@ -1,0 +1,4043 @@
+{
+    "track": "options",
+    "seed": 2,
+    "index": "nixos-51-unstable-ffb3c9b700e759be2ef13237c9d8f953b32a1e46",
+    "generations": 166,
+    "incumbent": {
+        "train": {
+            "fitness": 0.5351445567691839,
+            "ndcg": 0.5665681817886746,
+            "rbp": 0.42345005669122093,
+            "success": 0.7759199386950809,
+            "nodes": 14,
+            "rejected": false
+        },
+        "test": {
+            "fitness": 0.4870206341959218,
+            "ndcg": 0.5130673924941137,
+            "rbp": 0.3968336010031543,
+            "success": 0.7812179487179487,
+            "nodes": 14,
+            "rejected": false
+        }
+    },
+    "champion": {
+        "train": {
+            "fitness": 0.7072316276360425,
+            "ndcg": 0.7424251909576844,
+            "rbp": 0.5794573743494753,
+            "success": 0.8657270228190531,
+            "nodes": 13,
+            "rejected": false
+        },
+        "test": {
+            "fitness": 0.7108702037872406,
+            "ndcg": 0.7434204842170882,
+            "rbp": 0.593669082067851,
+            "success": 0.8775,
+            "nodes": 13,
+            "rejected": false
+        }
+    },
+    "shape": {
+        "must": [
+            {
+                "kind": "disMax",
+                "queries": [
+                    {
+                        "kind": "prefix",
+                        "target": "option_name.attr_path_reverse",
+                        "term": {
+                            "kind": "glued",
+                            "glue": "dash"
+                        },
+                        "name": {
+                            "kind": "unnamed"
+                        },
+                        "boost": 26.4
+                    },
+                    {
+                        "kind": "wildcard",
+                        "target": "option_name.edge",
+                        "term": {
+                            "kind": "perWord",
+                            "variants": true,
+                            "wrap": "surround"
+                        },
+                        "name": {
+                            "kind": "unnamed"
+                        }
+                    }
+                ],
+                "tieBreaker": 0.509,
+                "boost": 8.33
+            }
+        ],
+        "should": [
+            {
+                "kind": "wildcard",
+                "target": "option_name.attr_path",
+                "term": {
+                    "kind": "dotted"
+                },
+                "name": {
+                    "kind": "unnamed"
+                },
+                "boost": 0.546
+            },
+            {
+                "kind": "prefix",
+                "target": "option_name.attr_path_reverse",
+                "term": {
+                    "kind": "allButLast"
+                },
+                "name": {
+                    "kind": "unnamed"
+                },
+                "boost": 206,
+                "caseInsensitive": true
+            },
+            {
+                "kind": "wildcard",
+                "target": "option_name.attr_path_reverse",
+                "term": {
+                    "kind": "dottedPlus",
+                    "suffix": ".package"
+                },
+                "name": {
+                    "kind": "unnamed"
+                },
+                "boost": 0.111
+            },
+            {
+                "kind": "constantScore",
+                "filter": {
+                    "kind": "multiMatch",
+                    "type": "phrase_prefix",
+                    "term": {
+                        "kind": "fixed",
+                        "value": "enable"
+                    },
+                    "fields": [
+                        {
+                            "field": "service_packages.edge",
+                            "boost": 373
+                        },
+                        {
+                            "field": "option_name.edge",
+                            "boost": 11.6
+                        },
+                        {
+                            "field": "service_packages.edge",
+                            "boost": 0.839
+                        },
+                        {
+                            "field": "option_name.attr_path_reverse",
+                            "boost": 682
+                        }
+                    ],
+                    "name": {
+                        "kind": "unnamed"
+                    },
+                    "boost": 5.45,
+                    "operator": "or"
+                },
+                "boost": 0.128
+            },
+            {
+                "kind": "constantScore",
+                "filter": {
+                    "kind": "multiMatch",
+                    "type": "phrase",
+                    "term": {
+                        "kind": "lastWord"
+                    },
+                    "fields": [
+                        {
+                            "field": "service_packages.edge",
+                            "boost": 206
+                        },
+                        {
+                            "field": "option_description",
+                            "boost": 11.6
+                        },
+                        {
+                            "field": "option_description.*",
+                            "boost": 0.65
+                        },
+                        {
+                            "field": "option_name",
+                            "boost": 630
+                        }
+                    ],
+                    "name": {
+                        "kind": "unnamed"
+                    },
+                    "boost": 105
+                },
+                "boost": 0.0682
+            },
+            {
+                "kind": "constantScore",
+                "filter": {
+                    "kind": "multiMatch",
+                    "type": "cross_fields",
+                    "term": {
+                        "kind": "lastWord"
+                    },
+                    "fields": [
+                        {
+                            "field": "service_packages.edge",
+                            "boost": 384
+                        },
+                        {
+                            "field": "option_name.edge",
+                            "boost": 11.6
+                        },
+                        {
+                            "field": "option_description.*",
+                            "boost": 0.542
+                        },
+                        {
+                            "field": "option_name.attr_path_reverse",
+                            "boost": 746
+                        }
+                    ],
+                    "name": {
+                        "kind": "unnamed"
+                    },
+                    "boost": 39.3
+                },
+                "boost": 0.0975
+            }
+        ],
+        "rescore": {
+            "windowSize": 100,
+            "weight": 22.3,
+            "fn": {
+                "kind": "inverseFieldLength",
+                "field": "option_name"
+            }
+        }
+    },
+    "history": [
+        {
+            "generation": 0,
+            "train": {
+                "fitness": 0.5774324721301725,
+                "ndcg": 0.5912043454799414,
+                "rbp": 0.5363449787310968,
+                "success": 0.7817567508392934,
+                "nodes": 14,
+                "rejected": false
+            },
+            "test": {
+                "fitness": 0.4984467027982764,
+                "ndcg": 0.4927043951480324,
+                "rbp": 0.5354159333992524,
+                "success": 0.7517948717948717,
+                "nodes": 14,
+                "rejected": false
+            },
+            "median": 0.5351445567691839,
+            "championTrain": 0.5774324721301725,
+            "championTest": 0.4984467027982764,
+            "evaluated": 58
+        },
+        {
+            "generation": 1,
+            "train": {
+                "fitness": 0.5818156168270845,
+                "ndcg": 0.6134881168332753,
+                "rbp": 0.4671256168023206,
+                "success": 0.8224607808383899,
+                "nodes": 12,
+                "rejected": false
+            },
+            "test": {
+                "fitness": 0.5543544463753709,
+                "ndcg": 0.5811820732805734,
+                "rbp": 0.4590439387545609,
+                "success": 0.775,
+                "nodes": 12,
+                "rejected": false
+            },
+            "median": 0.5351445567691839,
+            "championTrain": 0.5818156168270845,
+            "championTest": 0.5543544463753709,
+            "evaluated": 115
+        },
+        {
+            "generation": 2,
+            "train": {
+                "fitness": 0.5853162229629623,
+                "ndcg": 0.5985718115106109,
+                "rbp": 0.5462938687723677,
+                "success": 0.7937567508392934,
+                "nodes": 14,
+                "rejected": false
+            },
+            "test": {
+                "fitness": 0.5076352627023335,
+                "ndcg": 0.5046578071023469,
+                "rbp": 0.5335450851022798,
+                "success": 0.7517948717948717,
+                "nodes": 14,
+                "rejected": false
+            },
+            "median": 0.5536441352795886,
+            "championTrain": 0.5853162229629623,
+            "championTest": 0.5076352627023335,
+            "evaluated": 167
+        },
+        {
+            "generation": 3,
+            "train": {
+                "fitness": 0.6066774306625913,
+                "ndcg": 0.6391041502827819,
+                "rbp": 0.4899705521818289,
+                "success": 0.8396876715946925,
+                "nodes": 13,
+                "rejected": false
+            },
+            "test": {
+                "fitness": 0.5758587997236188,
+                "ndcg": 0.6027637090059519,
+                "rbp": 0.4812391625942863,
+                "success": 0.8074999999999999,
+                "nodes": 13,
+                "rejected": false
+            },
+            "median": 0.5774324721301725,
+            "championTrain": 0.6066774306625913,
+            "championTest": 0.5758587997236188,
+            "evaluated": 223
+        },
+        {
+            "generation": 4,
+            "train": {
+                "fitness": 0.6090477790428184,
+                "ndcg": 0.6420670857580658,
+                "rbp": 0.4899705521818289,
+                "success": 0.8468305287375496,
+                "nodes": 13,
+                "rejected": false
+            },
+            "test": {
+                "fitness": 0.5762812005311042,
+                "ndcg": 0.6032917100153087,
+                "rbp": 0.4812391625942863,
+                "success": 0.8074999999999999,
+                "nodes": 13,
+                "rejected": false
+            },
+            "median": 0.5810156168270845,
+            "championTrain": 0.6090477790428184,
+            "championTest": 0.5762812005311042,
+            "evaluated": 281
+        },
+        {
+            "generation": 5,
+            "train": {
+                "fitness": 0.6261215484769714,
+                "ndcg": 0.6514550969108563,
+                "rbp": 0.5367873547414315,
+                "success": 0.807076756260817,
+                "nodes": 12,
+                "rejected": false
+            },
+            "test": {
+                "fitness": 0.6147706892093672,
+                "ndcg": 0.6380251084387175,
+                "rbp": 0.533753012291965,
+                "success": 0.8074999999999999,
+                "nodes": 12,
+                "rejected": false
+            },
+            "median": 0.5852236081629844,
+            "championTrain": 0.6261215484769714,
+            "championTest": 0.6147706892093672,
+            "evaluated": 339
+        },
+        {
+            "generation": 6,
+            "train": {
+                "fitness": 0.6261215484769714,
+                "ndcg": 0.6514550969108563,
+                "rbp": 0.5367873547414315,
+                "success": 0.807076756260817,
+                "nodes": 12,
+                "rejected": false
+            },
+            "test": {
+                "fitness": 0.6147706892093672,
+                "ndcg": 0.6380251084387175,
+                "rbp": 0.533753012291965,
+                "success": 0.8074999999999999,
+                "nodes": 12,
+                "rejected": false
+            },
+            "median": 0.6066774306625913,
+            "championTrain": 0.6261215484769714,
+            "championTest": 0.6147706892093672,
+            "evaluated": 394
+        },
+        {
+            "generation": 7,
+            "train": {
+                "fitness": 0.6261215484769714,
+                "ndcg": 0.6514550969108563,
+                "rbp": 0.5367873547414315,
+                "success": 0.807076756260817,
+                "nodes": 12,
+                "rejected": false
+            },
+            "test": {
+                "fitness": 0.6147706892093672,
+                "ndcg": 0.6380251084387175,
+                "rbp": 0.533753012291965,
+                "success": 0.8074999999999999,
+                "nodes": 12,
+                "rejected": false
+            },
+            "median": 0.6069985045071052,
+            "championTrain": 0.6261215484769714,
+            "championTest": 0.6147706892093672,
+            "evaluated": 451
+        },
+        {
+            "generation": 8,
+            "train": {
+                "fitness": 0.6263215484769714,
+                "ndcg": 0.6514550969108563,
+                "rbp": 0.5367873547414315,
+                "success": 0.807076756260817,
+                "nodes": 11,
+                "rejected": false
+            },
+            "test": {
+                "fitness": 0.6149706892093671,
+                "ndcg": 0.6380251084387175,
+                "rbp": 0.533753012291965,
+                "success": 0.8074999999999999,
+                "nodes": 11,
+                "rejected": false
+            },
+            "median": 0.6158434519686558,
+            "championTrain": 0.6263215484769714,
+            "championTest": 0.6149706892093671,
+            "evaluated": 505
+        },
+        {
+            "generation": 9,
+            "train": {
+                "fitness": 0.6263215484769714,
+                "ndcg": 0.6514550969108563,
+                "rbp": 0.5367873547414315,
+                "success": 0.807076756260817,
+                "nodes": 11,
+                "rejected": false
+            },
+            "test": {
+                "fitness": 0.6149706892093671,
+                "ndcg": 0.6380251084387175,
+                "rbp": 0.533753012291965,
+                "success": 0.8074999999999999,
+                "nodes": 11,
+                "rejected": false
+            },
+            "median": 0.6257215484769714,
+            "championTrain": 0.6263215484769714,
+            "championTest": 0.6149706892093671,
+            "evaluated": 562
+        },
+        {
+            "generation": 10,
+            "train": {
+                "fitness": 0.6303454597606444,
+                "ndcg": 0.6549728603183758,
+                "rbp": 0.542835857529719,
+                "success": 0.807076756260817,
+                "nodes": 11,
+                "rejected": false
+            },
+            "test": {
+                "fitness": 0.6172232754626361,
+                "ndcg": 0.6393881331969543,
+                "rbp": 0.539563844525363,
+                "success": 0.8074999999999999,
+                "nodes": 11,
+                "rejected": false
+            },
+            "median": 0.6261215484769714,
+            "championTrain": 0.6303454597606444,
+            "championTest": 0.6172232754626361,
+            "evaluated": 618
+        },
+        {
+            "generation": 11,
+            "train": {
+                "fitness": 0.6333197115045177,
+                "ndcg": 0.6576276632882707,
+                "rbp": 0.5500879043695057,
+                "success": 0.8041816627395375,
+                "nodes": 14,
+                "rejected": false
+            },
+            "test": {
+                "fitness": 0.6357817587133142,
+                "ndcg": 0.6597330376835568,
+                "rbp": 0.5539766428323438,
+                "success": 0.8358333333333332,
+                "nodes": 14,
+                "rejected": false
+            },
+            "median": 0.6261215484769714,
+            "championTrain": 0.6333197115045177,
+            "championTest": 0.6357817587133142,
+            "evaluated": 675
+        },
+        {
+            "generation": 12,
+            "train": {
+                "fitness": 0.6333197115045177,
+                "ndcg": 0.6576276632882707,
+                "rbp": 0.5500879043695057,
+                "success": 0.8041816627395375,
+                "nodes": 14,
+                "rejected": false
+            },
+            "test": {
+                "fitness": 0.6357817587133142,
+                "ndcg": 0.6597330376835568,
+                "rbp": 0.5539766428323438,
+                "success": 0.8358333333333332,
+                "nodes": 14,
+                "rejected": false
+            },
+            "median": 0.6263215484769714,
+            "championTrain": 0.6333197115045177,
+            "championTest": 0.6357817587133142,
+            "evaluated": 733
+        },
+        {
+            "generation": 13,
+            "train": {
+                "fitness": 0.6333197115045177,
+                "ndcg": 0.6576276632882707,
+                "rbp": 0.5500879043695057,
+                "success": 0.8041816627395375,
+                "nodes": 14,
+                "rejected": false
+            },
+            "test": {
+                "fitness": 0.6357817587133142,
+                "ndcg": 0.6597330376835568,
+                "rbp": 0.5539766428323438,
+                "success": 0.8358333333333332,
+                "nodes": 14,
+                "rejected": false
+            },
+            "median": 0.627530852076394,
+            "championTrain": 0.6333197115045177,
+            "championTest": 0.6357817587133142,
+            "evaluated": 789
+        },
+        {
+            "generation": 14,
+            "train": {
+                "fitness": 0.6335197115045177,
+                "ndcg": 0.6576276632882707,
+                "rbp": 0.5500879043695057,
+                "success": 0.8041816627395375,
+                "nodes": 13,
+                "rejected": false
+            },
+            "test": {
+                "fitness": 0.6359817587133142,
+                "ndcg": 0.6597330376835568,
+                "rbp": 0.5539766428323438,
+                "success": 0.8358333333333332,
+                "nodes": 13,
+                "rejected": false
+            },
+            "median": 0.6279007655583396,
+            "championTrain": 0.6335197115045177,
+            "championTest": 0.6359817587133142,
+            "evaluated": 846
+        },
+        {
+            "generation": 15,
+            "train": {
+                "fitness": 0.6343524390685046,
+                "ndcg": 0.6585224216091038,
+                "rbp": 0.5516725089061075,
+                "success": 0.8041816627395375,
+                "nodes": 14,
+                "rejected": false
+            },
+            "test": {
+                "fitness": 0.6350805786998927,
+                "ndcg": 0.6588565626667798,
+                "rbp": 0.5539766428323438,
+                "success": 0.8358333333333332,
+                "nodes": 14,
+                "rejected": false
+            },
+            "median": 0.6297454597606443,
+            "championTrain": 0.6343524390685046,
+            "championTest": 0.6350805786998927,
+            "evaluated": 904
+        },
+        {
+            "generation": 16,
+            "train": {
+                "fitness": 0.6421805823878829,
+                "ndcg": 0.6680350602131121,
+                "rbp": 0.5517626710869659,
+                "success": 0.8284242307344775,
+                "nodes": 13,
+                "rejected": false
+            },
+            "test": {
+                "fitness": 0.6267664228418258,
+                "ndcg": 0.648642167709754,
+                "rbp": 0.5522634433701126,
+                "success": 0.815,
+                "nodes": 13,
+                "rejected": false
+            },
+            "median": 0.6333197115045177,
+            "championTrain": 0.6421805823878829,
+            "championTest": 0.6267664228418258,
+            "evaluated": 961
+        },
+        {
+            "generation": 17,
+            "train": {
+                "fitness": 0.6421805823878829,
+                "ndcg": 0.6680350602131121,
+                "rbp": 0.5517626710869659,
+                "success": 0.8284242307344775,
+                "nodes": 13,
+                "rejected": false
+            },
+            "test": {
+                "fitness": 0.6267664228418258,
+                "ndcg": 0.648642167709754,
+                "rbp": 0.5522634433701126,
+                "success": 0.815,
+                "nodes": 13,
+                "rejected": false
+            },
+            "median": 0.6333197115045177,
+            "championTrain": 0.6421805823878829,
+            "championTest": 0.6267664228418258,
+            "evaluated": 1019
+        },
+        {
+            "generation": 18,
+            "train": {
+                "fitness": 0.6435110321546438,
+                "ndcg": 0.6692417387479331,
+                "rbp": 0.5565882057814862,
+                "success": 0.8355210049280258,
+                "nodes": 16,
+                "rejected": false
+            },
+            "test": {
+                "fitness": 0.6305312927960056,
+                "ndcg": 0.65327841696566,
+                "rbp": 0.5555427961173873,
+                "success": 0.8233333333333333,
+                "nodes": 16,
+                "rejected": false
+            },
+            "median": 0.6335197115045177,
+            "championTrain": 0.6435110321546438,
+            "championTest": 0.6305312927960056,
+            "evaluated": 1072
+        },
+        {
+            "generation": 19,
+            "train": {
+                "fitness": 0.6435110321546438,
+                "ndcg": 0.6692417387479331,
+                "rbp": 0.5565882057814862,
+                "success": 0.8355210049280258,
+                "nodes": 16,
+                "rejected": false
+            },
+            "test": {
+                "fitness": 0.6305312927960056,
+                "ndcg": 0.65327841696566,
+                "rbp": 0.5555427961173873,
+                "success": 0.8233333333333333,
+                "nodes": 16,
+                "rejected": false
+            },
+            "median": 0.6370700034533744,
+            "championTrain": 0.6435110321546438,
+            "championTest": 0.6305312927960056,
+            "evaluated": 1126
+        },
+        {
+            "generation": 20,
+            "train": {
+                "fitness": 0.6499984189425442,
+                "ndcg": 0.6760904290065121,
+                "rbp": 0.5626303786866721,
+                "success": 0.8384621813986141,
+                "nodes": 17,
+                "rejected": false
+            },
+            "test": {
+                "fitness": 0.6312916439430998,
+                "ndcg": 0.6559863742514507,
+                "rbp": 0.5495127227096956,
+                "success": 0.8433333333333333,
+                "nodes": 17,
+                "rejected": false
+            },
+            "median": 0.6378028993828587,
+            "championTrain": 0.6499984189425442,
+            "championTest": 0.6312916439430998,
+            "evaluated": 1181
+        },
+        {
+            "generation": 21,
+            "train": {
+                "fitness": 0.6499984189425442,
+                "ndcg": 0.6760904290065121,
+                "rbp": 0.5626303786866721,
+                "success": 0.8384621813986141,
+                "nodes": 17,
+                "rejected": false
+            },
+            "test": {
+                "fitness": 0.6312916439430998,
+                "ndcg": 0.6559863742514507,
+                "rbp": 0.5495127227096956,
+                "success": 0.8433333333333333,
+                "nodes": 17,
+                "rejected": false
+            },
+            "median": 0.6406939147370475,
+            "championTrain": 0.6499984189425442,
+            "championTest": 0.6312916439430998,
+            "evaluated": 1239
+        },
+        {
+            "generation": 22,
+            "train": {
+                "fitness": 0.6499984189425442,
+                "ndcg": 0.6760904290065121,
+                "rbp": 0.5626303786866721,
+                "success": 0.8384621813986141,
+                "nodes": 17,
+                "rejected": false
+            },
+            "test": {
+                "fitness": 0.6312916439430998,
+                "ndcg": 0.6559863742514507,
+                "rbp": 0.5495127227096956,
+                "success": 0.8433333333333333,
+                "nodes": 17,
+                "rejected": false
+            },
+            "median": 0.6435110321546438,
+            "championTrain": 0.6499984189425442,
+            "championTest": 0.6312916439430998,
+            "evaluated": 1296
+        },
+        {
+            "generation": 23,
+            "train": {
+                "fitness": 0.6499984189425442,
+                "ndcg": 0.6760904290065121,
+                "rbp": 0.5626303786866721,
+                "success": 0.8384621813986141,
+                "nodes": 17,
+                "rejected": false
+            },
+            "test": {
+                "fitness": 0.6312916439430998,
+                "ndcg": 0.6559863742514507,
+                "rbp": 0.5495127227096956,
+                "success": 0.8433333333333333,
+                "nodes": 17,
+                "rejected": false
+            },
+            "median": 0.643573125314055,
+            "championTrain": 0.6499984189425442,
+            "championTest": 0.6312916439430998,
+            "evaluated": 1350
+        },
+        {
+            "generation": 24,
+            "train": {
+                "fitness": 0.6499984189425442,
+                "ndcg": 0.6760904290065121,
+                "rbp": 0.5626303786866721,
+                "success": 0.8384621813986141,
+                "nodes": 17,
+                "rejected": false
+            },
+            "test": {
+                "fitness": 0.6312916439430998,
+                "ndcg": 0.6559863742514507,
+                "rbp": 0.5495127227096956,
+                "success": 0.8433333333333333,
+                "nodes": 17,
+                "rejected": false
+            },
+            "median": 0.6445361999800401,
+            "championTrain": 0.6499984189425442,
+            "championTest": 0.6312916439430998,
+            "evaluated": 1407
+        },
+        {
+            "generation": 25,
+            "train": {
+                "fitness": 0.6543500709482634,
+                "ndcg": 0.6798776383687831,
+                "rbp": 0.5692398012661841,
+                "success": 0.8384621813986141,
+                "nodes": 17,
+                "rejected": false
+            },
+            "test": {
+                "fitness": 0.6295090834685961,
+                "ndcg": 0.6532819400899024,
+                "rbp": 0.5514176569833708,
+                "success": 0.8233333333333333,
+                "nodes": 17,
+                "rejected": false
+            },
+            "median": 0.6493984189425441,
+            "championTrain": 0.6543500709482634,
+            "championTest": 0.6295090834685961,
+            "evaluated": 1464
+        },
+        {
+            "generation": 26,
+            "train": {
+                "fitness": 0.6543500709482634,
+                "ndcg": 0.6798776383687831,
+                "rbp": 0.5692398012661841,
+                "success": 0.8384621813986141,
+                "nodes": 17,
+                "rejected": false
+            },
+            "test": {
+                "fitness": 0.6295090834685961,
+                "ndcg": 0.6532819400899024,
+                "rbp": 0.5514176569833708,
+                "success": 0.8233333333333333,
+                "nodes": 17,
+                "rejected": false
+            },
+            "median": 0.6496233594110491,
+            "championTrain": 0.6543500709482634,
+            "championTest": 0.6295090834685961,
+            "evaluated": 1519
+        },
+        {
+            "generation": 27,
+            "train": {
+                "fitness": 0.6543500709482634,
+                "ndcg": 0.6798776383687831,
+                "rbp": 0.5692398012661841,
+                "success": 0.8384621813986141,
+                "nodes": 17,
+                "rejected": false
+            },
+            "test": {
+                "fitness": 0.6295090834685961,
+                "ndcg": 0.6532819400899024,
+                "rbp": 0.5514176569833708,
+                "success": 0.8233333333333333,
+                "nodes": 17,
+                "rejected": false
+            },
+            "median": 0.6495984189425441,
+            "championTrain": 0.6543500709482634,
+            "championTest": 0.6295090834685961,
+            "evaluated": 1574
+        },
+        {
+            "generation": 28,
+            "train": {
+                "fitness": 0.6543500709482634,
+                "ndcg": 0.6798776383687831,
+                "rbp": 0.5692398012661841,
+                "success": 0.8384621813986141,
+                "nodes": 17,
+                "rejected": false
+            },
+            "test": {
+                "fitness": 0.6295090834685961,
+                "ndcg": 0.6532819400899024,
+                "rbp": 0.5514176569833708,
+                "success": 0.8233333333333333,
+                "nodes": 17,
+                "rejected": false
+            },
+            "median": 0.649664647631404,
+            "championTrain": 0.6543500709482634,
+            "championTest": 0.6295090834685961,
+            "evaluated": 1632
+        },
+        {
+            "generation": 29,
+            "train": {
+                "fitness": 0.6558039527945708,
+                "ndcg": 0.6818587546893567,
+                "rbp": 0.568584745215427,
+                "success": 0.8384621813986141,
+                "nodes": 17,
+                "rejected": false
+            },
+            "test": {
+                "fitness": 0.6326996480592415,
+                "ndcg": 0.6568883218441546,
+                "rbp": 0.5529449529195888,
+                "success": 0.8433333333333333,
+                "nodes": 17,
+                "rejected": false
+            },
+            "median": 0.6474882912237044,
+            "championTrain": 0.6558039527945708,
+            "championTest": 0.6326996480592415,
+            "evaluated": 1689
+        },
+        {
+            "generation": 30,
+            "train": {
+                "fitness": 0.6558039527945708,
+                "ndcg": 0.6818587546893567,
+                "rbp": 0.568584745215427,
+                "success": 0.8384621813986141,
+                "nodes": 17,
+                "rejected": false
+            },
+            "test": {
+                "fitness": 0.6326996480592415,
+                "ndcg": 0.6568883218441546,
+                "rbp": 0.5529449529195888,
+                "success": 0.8433333333333333,
+                "nodes": 17,
+                "rejected": false
+            },
+            "median": 0.6498578829406626,
+            "championTrain": 0.6558039527945708,
+            "championTest": 0.6326996480592415,
+            "evaluated": 1745
+        },
+        {
+            "generation": 31,
+            "train": {
+                "fitness": 0.6569715340050012,
+                "ndcg": 0.6822638790856064,
+                "rbp": 0.5728021536825798,
+                "success": 0.8384621813986141,
+                "nodes": 17,
+                "rejected": false
+            },
+            "test": {
+                "fitness": 0.6288079034551745,
+                "ndcg": 0.6524054650731254,
+                "rbp": 0.5514176569833708,
+                "success": 0.8233333333333333,
+                "nodes": 17,
+                "rejected": false
+            },
+            "median": 0.6502509729273208,
+            "championTrain": 0.6569715340050012,
+            "championTest": 0.6288079034551745,
+            "evaluated": 1802
+        },
+        {
+            "generation": 32,
+            "train": {
+                "fitness": 0.6569715340050012,
+                "ndcg": 0.6822638790856064,
+                "rbp": 0.5728021536825798,
+                "success": 0.8384621813986141,
+                "nodes": 17,
+                "rejected": false
+            },
+            "test": {
+                "fitness": 0.6288079034551745,
+                "ndcg": 0.6524054650731254,
+                "rbp": 0.5514176569833708,
+                "success": 0.8233333333333333,
+                "nodes": 17,
+                "rejected": false
+            },
+            "median": 0.650932721816701,
+            "championTrain": 0.6569715340050012,
+            "championTest": 0.6288079034551745,
+            "evaluated": 1860
+        },
+        {
+            "generation": 33,
+            "train": {
+                "fitness": 0.6571715340050012,
+                "ndcg": 0.6822638790856064,
+                "rbp": 0.5728021536825798,
+                "success": 0.8384621813986141,
+                "nodes": 16,
+                "rejected": false
+            },
+            "test": {
+                "fitness": 0.6290079034551744,
+                "ndcg": 0.6524054650731254,
+                "rbp": 0.5514176569833708,
+                "success": 0.8233333333333333,
+                "nodes": 16,
+                "rejected": false
+            },
+            "median": 0.6523476227213281,
+            "championTrain": 0.6571715340050012,
+            "championTest": 0.6290079034551744,
+            "evaluated": 1917
+        },
+        {
+            "generation": 34,
+            "train": {
+                "fitness": 0.6586259680824983,
+                "ndcg": 0.6838530219852792,
+                "rbp": 0.5737177524713744,
+                "success": 0.8384621813986141,
+                "nodes": 16,
+                "rejected": false
+            },
+            "test": {
+                "fitness": 0.6310880988929143,
+                "ndcg": 0.6536937416979277,
+                "rbp": 0.5566655276728605,
+                "success": 0.8233333333333333,
+                "nodes": 16,
+                "rejected": false
+            },
+            "median": 0.6534738992565645,
+            "championTrain": 0.6586259680824983,
+            "championTest": 0.6310880988929143,
+            "evaluated": 1973
+        },
+        {
+            "generation": 35,
+            "train": {
+                "fitness": 0.6586259680824983,
+                "ndcg": 0.6838530219852792,
+                "rbp": 0.5737177524713744,
+                "success": 0.8384621813986141,
+                "nodes": 16,
+                "rejected": false
+            },
+            "test": {
+                "fitness": 0.6310880988929143,
+                "ndcg": 0.6536937416979277,
+                "rbp": 0.5566655276728605,
+                "success": 0.8233333333333333,
+                "nodes": 16,
+                "rejected": false
+            },
+            "median": 0.6545500709482633,
+            "championTrain": 0.6586259680824983,
+            "championTest": 0.6310880988929143,
+            "evaluated": 2029
+        },
+        {
+            "generation": 36,
+            "train": {
+                "fitness": 0.6586259680824983,
+                "ndcg": 0.6838530219852792,
+                "rbp": 0.5737177524713744,
+                "success": 0.8384621813986141,
+                "nodes": 16,
+                "rejected": false
+            },
+            "test": {
+                "fitness": 0.6310880988929143,
+                "ndcg": 0.6536937416979277,
+                "rbp": 0.5566655276728605,
+                "success": 0.8233333333333333,
+                "nodes": 16,
+                "rejected": false
+            },
+            "median": 0.6554700881153827,
+            "championTrain": 0.6586259680824983,
+            "championTest": 0.6310880988929143,
+            "evaluated": 2085
+        },
+        {
+            "generation": 37,
+            "train": {
+                "fitness": 0.6597739415598237,
+                "ndcg": 0.6854652416046807,
+                "rbp": 0.5730087413803959,
+                "success": 0.8556429892056078,
+                "nodes": 16,
+                "rejected": false
+            },
+            "test": {
+                "fitness": 0.642573175192756,
+                "ndcg": 0.664614285766944,
+                "rbp": 0.5704087328960036,
+                "success": 0.8733333333333333,
+                "nodes": 16,
+                "rejected": false
+            },
+            "median": 0.6545569263207507,
+            "championTrain": 0.6597739415598237,
+            "championTest": 0.642573175192756,
+            "evaluated": 2142
+        },
+        {
+            "generation": 38,
+            "train": {
+                "fitness": 0.664165712936135,
+                "ndcg": 0.6903998341348877,
+                "rbp": 0.5732292281411245,
+                "success": 0.858584165676196,
+                "nodes": 14,
+                "rejected": false
+            },
+            "test": {
+                "fitness": 0.6417499431258725,
+                "ndcg": 0.6637100453791324,
+                "rbp": 0.5679095341128328,
+                "success": 0.8433333333333333,
+                "nodes": 14,
+                "rejected": false
+            },
+            "median": 0.6553371501425819,
+            "championTrain": 0.664165712936135,
+            "championTest": 0.6417499431258725,
+            "evaluated": 2199
+        },
+        {
+            "generation": 39,
+            "train": {
+                "fitness": 0.6645657129361351,
+                "ndcg": 0.6903998341348877,
+                "rbp": 0.5732292281411245,
+                "success": 0.858584165676196,
+                "nodes": 12,
+                "rejected": false
+            },
+            "test": {
+                "fitness": 0.6421499431258726,
+                "ndcg": 0.6637100453791324,
+                "rbp": 0.5679095341128328,
+                "success": 0.8433333333333333,
+                "nodes": 12,
+                "rejected": false
+            },
+            "median": 0.6553371501425819,
+            "championTrain": 0.6645657129361351,
+            "championTest": 0.6421499431258726,
+            "evaluated": 2254
+        },
+        {
+            "generation": 40,
+            "train": {
+                "fitness": 0.6645657129361351,
+                "ndcg": 0.6903998341348877,
+                "rbp": 0.5732292281411245,
+                "success": 0.858584165676196,
+                "nodes": 12,
+                "rejected": false
+            },
+            "test": {
+                "fitness": 0.6421499431258726,
+                "ndcg": 0.6637100453791324,
+                "rbp": 0.5679095341128328,
+                "success": 0.8433333333333333,
+                "nodes": 12,
+                "rejected": false
+            },
+            "median": 0.6560792311338418,
+            "championTrain": 0.6645657129361351,
+            "championTest": 0.6421499431258726,
+            "evaluated": 2311
+        },
+        {
+            "generation": 41,
+            "train": {
+                "fitness": 0.669340451351344,
+                "ndcg": 0.6965674294321226,
+                "rbp": 0.5744325390282293,
+                "success": 0.858584165676196,
+                "nodes": 14,
+                "rejected": false
+            },
+            "test": {
+                "fitness": 0.6417499431258725,
+                "ndcg": 0.6637100453791324,
+                "rbp": 0.5679095341128328,
+                "success": 0.8433333333333333,
+                "nodes": 14,
+                "rejected": false
+            },
+            "median": 0.6589437146405639,
+            "championTrain": 0.669340451351344,
+            "championTest": 0.6417499431258725,
+            "evaluated": 2364
+        },
+        {
+            "generation": 42,
+            "train": {
+                "fitness": 0.6700912640329585,
+                "ndcg": 0.6976995992725769,
+                "rbp": 0.5736579230744849,
+                "success": 0.858584165676196,
+                "nodes": 14,
+                "rejected": false
+            },
+            "test": {
+                "fitness": 0.6463737956756428,
+                "ndcg": 0.6697629864251217,
+                "rbp": 0.5668170326777271,
+                "success": 0.8433333333333333,
+                "nodes": 14,
+                "rejected": false
+            },
+            "median": 0.6632856372408009,
+            "championTrain": 0.6700912640329585,
+            "championTest": 0.6463737956756428,
+            "evaluated": 2420
+        },
+        {
+            "generation": 43,
+            "train": {
+                "fitness": 0.6704912640329586,
+                "ndcg": 0.6976995992725769,
+                "rbp": 0.5736579230744849,
+                "success": 0.858584165676196,
+                "nodes": 12,
+                "rejected": false
+            },
+            "test": {
+                "fitness": 0.6467737956756429,
+                "ndcg": 0.6697629864251217,
+                "rbp": 0.5668170326777271,
+                "success": 0.8433333333333333,
+                "nodes": 12,
+                "rejected": false
+            },
+            "median": 0.6636856372408009,
+            "championTrain": 0.6704912640329586,
+            "championTest": 0.6467737956756429,
+            "evaluated": 2476
+        },
+        {
+            "generation": 44,
+            "train": {
+                "fitness": 0.6707214909522183,
+                "ndcg": 0.698151085022627,
+                "rbp": 0.5750031146705834,
+                "success": 0.858584165676196,
+                "nodes": 14,
+                "rejected": false
+            },
+            "test": {
+                "fitness": 0.6471040383673384,
+                "ndcg": 0.6701464649975839,
+                "rbp": 0.5689343318463562,
+                "success": 0.8433333333333333,
+                "nodes": 14,
+                "rejected": false
+            },
+            "median": 0.663686582519062,
+            "championTrain": 0.6707214909522183,
+            "championTest": 0.6471040383673384,
+            "evaluated": 2534
+        },
+        {
+            "generation": 45,
+            "train": {
+                "fitness": 0.6707214909522183,
+                "ndcg": 0.698151085022627,
+                "rbp": 0.5750031146705834,
+                "success": 0.858584165676196,
+                "nodes": 14,
+                "rejected": false
+            },
+            "test": {
+                "fitness": 0.6471040383673384,
+                "ndcg": 0.6701464649975839,
+                "rbp": 0.5689343318463562,
+                "success": 0.8433333333333333,
+                "nodes": 14,
+                "rejected": false
+            },
+            "median": 0.664086582519062,
+            "championTrain": 0.6707214909522183,
+            "championTest": 0.6471040383673384,
+            "evaluated": 2590
+        },
+        {
+            "generation": 46,
+            "train": {
+                "fitness": 0.674017062053398,
+                "ndcg": 0.7018357203468423,
+                "rbp": 0.5757424288796206,
+                "success": 0.858584165676196,
+                "nodes": 13,
+                "rejected": false
+            },
+            "test": {
+                "fitness": 0.6419499431258725,
+                "ndcg": 0.6637100453791324,
+                "rbp": 0.5679095341128328,
+                "success": 0.8433333333333333,
+                "nodes": 13,
+                "rejected": false
+            },
+            "median": 0.6652637999728688,
+            "championTrain": 0.674017062053398,
+            "championTest": 0.6419499431258725,
+            "evaluated": 2644
+        },
+        {
+            "generation": 47,
+            "train": {
+                "fitness": 0.674017062053398,
+                "ndcg": 0.7018357203468423,
+                "rbp": 0.5757424288796206,
+                "success": 0.858584165676196,
+                "nodes": 13,
+                "rejected": false
+            },
+            "test": {
+                "fitness": 0.6419499431258725,
+                "ndcg": 0.6637100453791324,
+                "rbp": 0.5679095341128328,
+                "success": 0.8433333333333333,
+                "nodes": 13,
+                "rejected": false
+            },
+            "median": 0.669340451351344,
+            "championTrain": 0.674017062053398,
+            "championTest": 0.6419499431258725,
+            "evaluated": 2700
+        },
+        {
+            "generation": 48,
+            "train": {
+                "fitness": 0.674217062053398,
+                "ndcg": 0.7018357203468423,
+                "rbp": 0.5757424288796206,
+                "success": 0.858584165676196,
+                "nodes": 12,
+                "rejected": false
+            },
+            "test": {
+                "fitness": 0.6421499431258726,
+                "ndcg": 0.6637100453791324,
+                "rbp": 0.5679095341128328,
+                "success": 0.8433333333333333,
+                "nodes": 12,
+                "rejected": false
+            },
+            "median": 0.664165712936135,
+            "championTrain": 0.674217062053398,
+            "championTest": 0.6421499431258726,
+            "evaluated": 2756
+        },
+        {
+            "generation": 49,
+            "train": {
+                "fitness": 0.674417062053398,
+                "ndcg": 0.7018357203468423,
+                "rbp": 0.5757424288796206,
+                "success": 0.858584165676196,
+                "nodes": 11,
+                "rejected": false
+            },
+            "test": {
+                "fitness": 0.6423499431258726,
+                "ndcg": 0.6637100453791324,
+                "rbp": 0.5679095341128328,
+                "success": 0.8433333333333333,
+                "nodes": 11,
+                "rejected": false
+            },
+            "median": 0.6696576630554663,
+            "championTrain": 0.674417062053398,
+            "championTest": 0.6423499431258726,
+            "evaluated": 2812
+        },
+        {
+            "generation": 50,
+            "train": {
+                "fitness": 0.674417062053398,
+                "ndcg": 0.7018357203468423,
+                "rbp": 0.5757424288796206,
+                "success": 0.858584165676196,
+                "nodes": 11,
+                "rejected": false
+            },
+            "test": {
+                "fitness": 0.6423499431258726,
+                "ndcg": 0.6637100453791324,
+                "rbp": 0.5679095341128328,
+                "success": 0.8433333333333333,
+                "nodes": 11,
+                "rejected": false
+            },
+            "median": 0.669957867295154,
+            "championTrain": 0.674417062053398,
+            "championTest": 0.6423499431258726,
+            "evaluated": 2868
+        },
+        {
+            "generation": 51,
+            "train": {
+                "fitness": 0.674417062053398,
+                "ndcg": 0.7018357203468423,
+                "rbp": 0.5757424288796206,
+                "success": 0.858584165676196,
+                "nodes": 11,
+                "rejected": false
+            },
+            "test": {
+                "fitness": 0.6423499431258726,
+                "ndcg": 0.6637100453791324,
+                "rbp": 0.5679095341128328,
+                "success": 0.8433333333333333,
+                "nodes": 11,
+                "rejected": false
+            },
+            "median": 0.670486311291727,
+            "championTrain": 0.674417062053398,
+            "championTest": 0.6423499431258726,
+            "evaluated": 2924
+        },
+        {
+            "generation": 52,
+            "train": {
+                "fitness": 0.674690553383388,
+                "ndcg": 0.7021868354286596,
+                "rbp": 0.5767054252023014,
+                "success": 0.858584165676196,
+                "nodes": 12,
+                "rejected": false
+            },
+            "test": {
+                "fitness": 0.6418788570510129,
+                "ndcg": 0.6635696184390656,
+                "rbp": 0.5671158114988016,
+                "success": 0.8433333333333333,
+                "nodes": 12,
+                "rejected": false
+            },
+            "median": 0.6726988518001626,
+            "championTrain": 0.674690553383388,
+            "championTest": 0.6418788570510129,
+            "evaluated": 2980
+        },
+        {
+            "generation": 53,
+            "train": {
+                "fitness": 0.674690553383388,
+                "ndcg": 0.7021868354286596,
+                "rbp": 0.5767054252023014,
+                "success": 0.858584165676196,
+                "nodes": 12,
+                "rejected": false
+            },
+            "test": {
+                "fitness": 0.6418788570510129,
+                "ndcg": 0.6635696184390656,
+                "rbp": 0.5671158114988016,
+                "success": 0.8433333333333333,
+                "nodes": 12,
+                "rejected": false
+            },
+            "median": 0.6720686248809028,
+            "championTrain": 0.674690553383388,
+            "championTest": 0.6418788570510129,
+            "evaluated": 3035
+        },
+        {
+            "generation": 54,
+            "train": {
+                "fitness": 0.6747519975228357,
+                "ndcg": 0.701832717573182,
+                "rbp": 0.5754291173214504,
+                "success": 0.858584165676196,
+                "nodes": 9,
+                "rejected": false
+            },
+            "test": {
+                "fitness": 0.6428108402910597,
+                "ndcg": 0.6637206847199589,
+                "rbp": 0.5681714625754632,
+                "success": 0.8433333333333333,
+                "nodes": 9,
+                "rejected": false
+            },
+            "median": 0.6735868351341382,
+            "championTrain": 0.6747519975228357,
+            "championTest": 0.6428108402910597,
+            "evaluated": 3091
+        },
+        {
+            "generation": 55,
+            "train": {
+                "fitness": 0.6749533000310558,
+                "ndcg": 0.7021260248534297,
+                "rbp": 0.5762624007415601,
+                "success": 0.858584165676196,
+                "nodes": 10,
+                "rejected": false
+            },
+            "test": {
+                "fitness": 0.6459008650341947,
+                "ndcg": 0.6683098501927005,
+                "rbp": 0.5662649244001717,
+                "success": 0.8433333333333333,
+                "nodes": 10,
+                "rejected": false
+            },
+            "median": 0.673736986358064,
+            "championTrain": 0.6749533000310558,
+            "championTest": 0.6459008650341947,
+            "evaluated": 3147
+        },
+        {
+            "generation": 56,
+            "train": {
+                "fitness": 0.6750471287367037,
+                "ndcg": 0.7020253938390463,
+                "rbp": 0.5761340683273334,
+                "success": 0.858584165676196,
+                "nodes": 9,
+                "rejected": false
+            },
+            "test": {
+                "fitness": 0.6403520234450399,
+                "ndcg": 0.6614249068848969,
+                "rbp": 0.5650604896856122,
+                "success": 0.8433333333333333,
+                "nodes": 9,
+                "rejected": false
+            },
+            "median": 0.6731255457378078,
+            "championTrain": 0.6750471287367037,
+            "championTest": 0.6403520234450399,
+            "evaluated": 3201
+        },
+        {
+            "generation": 57,
+            "train": {
+                "fitness": 0.6750471287367037,
+                "ndcg": 0.7020253938390463,
+                "rbp": 0.5761340683273334,
+                "success": 0.858584165676196,
+                "nodes": 9,
+                "rejected": false
+            },
+            "test": {
+                "fitness": 0.6403520234450399,
+                "ndcg": 0.6614249068848969,
+                "rbp": 0.5650604896856122,
+                "success": 0.8433333333333333,
+                "nodes": 9,
+                "rejected": false
+            },
+            "median": 0.6708911572843466,
+            "championTrain": 0.6750471287367037,
+            "championTest": 0.6403520234450399,
+            "evaluated": 3256
+        },
+        {
+            "generation": 58,
+            "train": {
+                "fitness": 0.6750471287367037,
+                "ndcg": 0.7020253938390463,
+                "rbp": 0.5761340683273334,
+                "success": 0.858584165676196,
+                "nodes": 9,
+                "rejected": false
+            },
+            "test": {
+                "fitness": 0.6403520234450399,
+                "ndcg": 0.6614249068848969,
+                "rbp": 0.5650604896856122,
+                "success": 0.8433333333333333,
+                "nodes": 9,
+                "rejected": false
+            },
+            "median": 0.6722175164106987,
+            "championTrain": 0.6750471287367037,
+            "championTest": 0.6403520234450399,
+            "evaluated": 3310
+        },
+        {
+            "generation": 59,
+            "train": {
+                "fitness": 0.6750471287367037,
+                "ndcg": 0.7020253938390463,
+                "rbp": 0.5761340683273334,
+                "success": 0.858584165676196,
+                "nodes": 9,
+                "rejected": false
+            },
+            "test": {
+                "fitness": 0.6403520234450399,
+                "ndcg": 0.6614249068848969,
+                "rbp": 0.5650604896856122,
+                "success": 0.8433333333333333,
+                "nodes": 9,
+                "rejected": false
+            },
+            "median": 0.6686415522190821,
+            "championTrain": 0.6750471287367037,
+            "championTest": 0.6403520234450399,
+            "evaluated": 3366
+        },
+        {
+            "generation": 60,
+            "train": {
+                "fitness": 0.6750471287367037,
+                "ndcg": 0.7020253938390463,
+                "rbp": 0.5761340683273334,
+                "success": 0.858584165676196,
+                "nodes": 9,
+                "rejected": false
+            },
+            "test": {
+                "fitness": 0.6403520234450399,
+                "ndcg": 0.6614249068848969,
+                "rbp": 0.5650604896856122,
+                "success": 0.8433333333333333,
+                "nodes": 9,
+                "rejected": false
+            },
+            "median": 0.6731208367194375,
+            "championTrain": 0.6750471287367037,
+            "championTest": 0.6403520234450399,
+            "evaluated": 3421
+        },
+        {
+            "generation": 61,
+            "train": {
+                "fitness": 0.6750471287367037,
+                "ndcg": 0.7020253938390463,
+                "rbp": 0.5761340683273334,
+                "success": 0.858584165676196,
+                "nodes": 9,
+                "rejected": false
+            },
+            "test": {
+                "fitness": 0.6403520234450399,
+                "ndcg": 0.6614249068848969,
+                "rbp": 0.5650604896856122,
+                "success": 0.8433333333333333,
+                "nodes": 9,
+                "rejected": false
+            },
+            "median": 0.6732607782749213,
+            "championTrain": 0.6750471287367037,
+            "championTest": 0.6403520234450399,
+            "evaluated": 3475
+        },
+        {
+            "generation": 62,
+            "train": {
+                "fitness": 0.6750471287367037,
+                "ndcg": 0.7020253938390463,
+                "rbp": 0.5761340683273334,
+                "success": 0.858584165676196,
+                "nodes": 9,
+                "rejected": false
+            },
+            "test": {
+                "fitness": 0.6403520234450399,
+                "ndcg": 0.6614249068848969,
+                "rbp": 0.5650604896856122,
+                "success": 0.8433333333333333,
+                "nodes": 9,
+                "rejected": false
+            },
+            "median": 0.6602924327889169,
+            "championTrain": 0.6750471287367037,
+            "championTest": 0.6403520234450399,
+            "evaluated": 3531
+        },
+        {
+            "generation": 63,
+            "train": {
+                "fitness": 0.6750617910551537,
+                "ndcg": 0.7025418919277573,
+                "rbp": 0.5771413875647393,
+                "success": 0.858584165676196,
+                "nodes": 12,
+                "rejected": false
+            },
+            "test": {
+                "fitness": 0.6401806950259697,
+                "ndcg": 0.6620040285173591,
+                "rbp": 0.5648873610604123,
+                "success": 0.8433333333333333,
+                "nodes": 12,
+                "rejected": false
+            },
+            "median": 0.665551683389705,
+            "championTrain": 0.6750617910551537,
+            "championTest": 0.6401806950259697,
+            "evaluated": 3588
+        },
+        {
+            "generation": 64,
+            "train": {
+                "fitness": 0.6750617910551537,
+                "ndcg": 0.7025418919277573,
+                "rbp": 0.5771413875647393,
+                "success": 0.858584165676196,
+                "nodes": 12,
+                "rejected": false
+            },
+            "test": {
+                "fitness": 0.6401806950259697,
+                "ndcg": 0.6620040285173591,
+                "rbp": 0.5648873610604123,
+                "success": 0.8433333333333333,
+                "nodes": 12,
+                "rejected": false
+            },
+            "median": 0.66987599941179,
+            "championTrain": 0.6750617910551537,
+            "championTest": 0.6401806950259697,
+            "evaluated": 3643
+        },
+        {
+            "generation": 65,
+            "train": {
+                "fitness": 0.6750617910551537,
+                "ndcg": 0.7025418919277573,
+                "rbp": 0.5771413875647393,
+                "success": 0.858584165676196,
+                "nodes": 12,
+                "rejected": false
+            },
+            "test": {
+                "fitness": 0.6401806950259697,
+                "ndcg": 0.6620040285173591,
+                "rbp": 0.5648873610604123,
+                "success": 0.8433333333333333,
+                "nodes": 12,
+                "rejected": false
+            },
+            "median": 0.664547655485872,
+            "championTrain": 0.6750617910551537,
+            "championTest": 0.6401806950259697,
+            "evaluated": 3699
+        },
+        {
+            "generation": 66,
+            "train": {
+                "fitness": 0.6750617910551537,
+                "ndcg": 0.7025418919277573,
+                "rbp": 0.5771413875647393,
+                "success": 0.858584165676196,
+                "nodes": 12,
+                "rejected": false
+            },
+            "test": {
+                "fitness": 0.6401806950259697,
+                "ndcg": 0.6620040285173591,
+                "rbp": 0.5648873610604123,
+                "success": 0.8433333333333333,
+                "nodes": 12,
+                "rejected": false
+            },
+            "median": 0.6696458328066559,
+            "championTrain": 0.6750617910551537,
+            "championTest": 0.6401806950259697,
+            "evaluated": 3755
+        },
+        {
+            "generation": 67,
+            "train": {
+                "fitness": 0.6750617910551537,
+                "ndcg": 0.7025418919277573,
+                "rbp": 0.5771413875647393,
+                "success": 0.858584165676196,
+                "nodes": 12,
+                "rejected": false
+            },
+            "test": {
+                "fitness": 0.6401806950259697,
+                "ndcg": 0.6620040285173591,
+                "rbp": 0.5648873610604123,
+                "success": 0.8433333333333333,
+                "nodes": 12,
+                "rejected": false
+            },
+            "median": 0.6696458328066559,
+            "championTrain": 0.6750617910551537,
+            "championTest": 0.6401806950259697,
+            "evaluated": 3811
+        },
+        {
+            "generation": 68,
+            "train": {
+                "fitness": 0.6751286416526739,
+                "ndcg": 0.7023031673652504,
+                "rbp": 0.5754305388023676,
+                "success": 0.858584165676196,
+                "nodes": 9,
+                "rejected": false
+            },
+            "test": {
+                "fitness": 0.6444179238339496,
+                "ndcg": 0.6671556655552959,
+                "rbp": 0.5624669569485642,
+                "success": 0.8558333333333332,
+                "nodes": 9,
+                "rejected": false
+            },
+            "median": 0.6735605802712149,
+            "championTrain": 0.6751286416526739,
+            "championTest": 0.6444179238339496,
+            "evaluated": 3868
+        },
+        {
+            "generation": 69,
+            "train": {
+                "fitness": 0.6751286416526739,
+                "ndcg": 0.7023031673652504,
+                "rbp": 0.5754305388023676,
+                "success": 0.858584165676196,
+                "nodes": 9,
+                "rejected": false
+            },
+            "test": {
+                "fitness": 0.6444179238339496,
+                "ndcg": 0.6671556655552959,
+                "rbp": 0.5624669569485642,
+                "success": 0.8558333333333332,
+                "nodes": 9,
+                "rejected": false
+            },
+            "median": 0.6742478649928496,
+            "championTrain": 0.6751286416526739,
+            "championTest": 0.6444179238339496,
+            "evaluated": 3923
+        },
+        {
+            "generation": 70,
+            "train": {
+                "fitness": 0.6755735308903837,
+                "ndcg": 0.7032711512040116,
+                "rbp": 0.5777830496358719,
+                "success": 0.858584165676196,
+                "nodes": 13,
+                "rejected": false
+            },
+            "test": {
+                "fitness": 0.6447768381065752,
+                "ndcg": 0.6681182657602205,
+                "rbp": 0.5644111274919935,
+                "success": 0.8558333333333332,
+                "nodes": 13,
+                "rejected": false
+            },
+            "median": 0.6699608828980443,
+            "championTrain": 0.6755735308903837,
+            "championTest": 0.6447768381065752,
+            "evaluated": 3980
+        },
+        {
+            "generation": 71,
+            "train": {
+                "fitness": 0.6755735308903837,
+                "ndcg": 0.7032711512040116,
+                "rbp": 0.5777830496358719,
+                "success": 0.858584165676196,
+                "nodes": 13,
+                "rejected": false
+            },
+            "test": {
+                "fitness": 0.6447768381065752,
+                "ndcg": 0.6681182657602205,
+                "rbp": 0.5644111274919935,
+                "success": 0.8558333333333332,
+                "nodes": 13,
+                "rejected": false
+            },
+            "median": 0.6739518782221217,
+            "championTrain": 0.6755735308903837,
+            "championTest": 0.6447768381065752,
+            "evaluated": 4036
+        },
+        {
+            "generation": 72,
+            "train": {
+                "fitness": 0.6756739278140947,
+                "ndcg": 0.7027387300103028,
+                "rbp": 0.5764147190292622,
+                "success": 0.858584165676196,
+                "nodes": 9,
+                "rejected": false
+            },
+            "test": {
+                "fitness": 0.64414683775909,
+                "ndcg": 0.6670152386152292,
+                "rbp": 0.5616732343345329,
+                "success": 0.8558333333333332,
+                "nodes": 9,
+                "rejected": false
+            },
+            "median": 0.6744353392701258,
+            "championTrain": 0.6756739278140947,
+            "championTest": 0.64414683775909,
+            "evaluated": 4091
+        },
+        {
+            "generation": 73,
+            "train": {
+                "fitness": 0.6758868348476591,
+                "ndcg": 0.7105652610741181,
+                "rbp": 0.5461731299418231,
+                "success": 0.8515334744319564,
+                "nodes": 9,
+                "rejected": false
+            },
+            "test": {
+                "fitness": 0.6787068215944896,
+                "ndcg": 0.7123398888873385,
+                "rbp": 0.553174552423094,
+                "success": 0.8474999999999999,
+                "nodes": 9,
+                "rejected": false
+            },
+            "median": 0.6724991196763003,
+            "championTrain": 0.6758868348476591,
+            "championTest": 0.6787068215944896,
+            "evaluated": 4147
+        },
+        {
+            "generation": 74,
+            "train": {
+                "fitness": 0.6758868348476591,
+                "ndcg": 0.7105652610741181,
+                "rbp": 0.5461731299418231,
+                "success": 0.8515334744319564,
+                "nodes": 9,
+                "rejected": false
+            },
+            "test": {
+                "fitness": 0.6787068215944896,
+                "ndcg": 0.7123398888873385,
+                "rbp": 0.553174552423094,
+                "success": 0.8474999999999999,
+                "nodes": 9,
+                "rejected": false
+            },
+            "median": 0.6740730274136169,
+            "championTrain": 0.6758868348476591,
+            "championTest": 0.6787068215944896,
+            "evaluated": 4203
+        },
+        {
+            "generation": 75,
+            "train": {
+                "fitness": 0.6758868348476591,
+                "ndcg": 0.7105652610741181,
+                "rbp": 0.5461731299418231,
+                "success": 0.8515334744319564,
+                "nodes": 9,
+                "rejected": false
+            },
+            "test": {
+                "fitness": 0.6787068215944896,
+                "ndcg": 0.7123398888873385,
+                "rbp": 0.553174552423094,
+                "success": 0.8474999999999999,
+                "nodes": 9,
+                "rejected": false
+            },
+            "median": 0.670236554259984,
+            "championTrain": 0.6758868348476591,
+            "championTest": 0.6787068215944896,
+            "evaluated": 4260
+        },
+        {
+            "generation": 76,
+            "train": {
+                "fitness": 0.6792589710335397,
+                "ndcg": 0.7146674531167898,
+                "rbp": 0.5466250427005389,
+                "success": 0.8515334744319564,
+                "nodes": 9,
+                "rejected": false
+            },
+            "test": {
+                "fitness": 0.688255975342632,
+                "ndcg": 0.7198715193685261,
+                "rbp": 0.5707937992390563,
+                "success": 0.8474999999999999,
+                "nodes": 9,
+                "rejected": false
+            },
+            "median": 0.6700569858458024,
+            "championTrain": 0.6792589710335397,
+            "championTest": 0.688255975342632,
+            "evaluated": 4316
+        },
+        {
+            "generation": 77,
+            "train": {
+                "fitness": 0.6855687791567528,
+                "ndcg": 0.7199435199230124,
+                "rbp": 0.5590698160917147,
+                "success": 0.8586302486255047,
+                "nodes": 11,
+                "rejected": false
+            },
+            "test": {
+                "fitness": 0.6795494467492963,
+                "ndcg": 0.7124281765517397,
+                "rbp": 0.5590345275395227,
+                "success": 0.8474999999999999,
+                "nodes": 11,
+                "rejected": false
+            },
+            "median": 0.6708668308214668,
+            "championTrain": 0.6855687791567528,
+            "championTest": 0.6795494467492963,
+            "evaluated": 4371
+        },
+        {
+            "generation": 78,
+            "train": {
+                "fitness": 0.6907747660799227,
+                "ndcg": 0.7260787412307136,
+                "rbp": 0.5595588654767591,
+                "success": 0.8586302486255047,
+                "nodes": 10,
+                "rejected": false
+            },
+            "test": {
+                "fitness": 0.6928182339165401,
+                "ndcg": 0.7238413999634525,
+                "rbp": 0.5787255697288898,
+                "success": 0.8474999999999999,
+                "nodes": 10,
+                "rejected": false
+            },
+            "median": 0.6738867401716512,
+            "championTrain": 0.6907747660799227,
+            "championTest": 0.6928182339165401,
+            "evaluated": 4427
+        },
+        {
+            "generation": 79,
+            "train": {
+                "fitness": 0.6907747660799227,
+                "ndcg": 0.7260787412307136,
+                "rbp": 0.5595588654767591,
+                "success": 0.8586302486255047,
+                "nodes": 10,
+                "rejected": false
+            },
+            "test": {
+                "fitness": 0.6928182339165401,
+                "ndcg": 0.7238413999634525,
+                "rbp": 0.5787255697288898,
+                "success": 0.8474999999999999,
+                "nodes": 10,
+                "rejected": false
+            },
+            "median": 0.6753690500734943,
+            "championTrain": 0.6907747660799227,
+            "championTest": 0.6928182339165401,
+            "evaluated": 4483
+        },
+        {
+            "generation": 80,
+            "train": {
+                "fitness": 0.6907747660799227,
+                "ndcg": 0.7260787412307136,
+                "rbp": 0.5595588654767591,
+                "success": 0.8586302486255047,
+                "nodes": 10,
+                "rejected": false
+            },
+            "test": {
+                "fitness": 0.6928182339165401,
+                "ndcg": 0.7238413999634525,
+                "rbp": 0.5787255697288898,
+                "success": 0.8474999999999999,
+                "nodes": 10,
+                "rejected": false
+            },
+            "median": 0.6742931986316624,
+            "championTrain": 0.6907747660799227,
+            "championTest": 0.6928182339165401,
+            "evaluated": 4540
+        },
+        {
+            "generation": 81,
+            "train": {
+                "fitness": 0.6907747660799227,
+                "ndcg": 0.7260787412307136,
+                "rbp": 0.5595588654767591,
+                "success": 0.8586302486255047,
+                "nodes": 10,
+                "rejected": false
+            },
+            "test": {
+                "fitness": 0.6928182339165401,
+                "ndcg": 0.7238413999634525,
+                "rbp": 0.5787255697288898,
+                "success": 0.8474999999999999,
+                "nodes": 10,
+                "rejected": false
+            },
+            "median": 0.6715815239450902,
+            "championTrain": 0.6907747660799227,
+            "championTest": 0.6928182339165401,
+            "evaluated": 4595
+        },
+        {
+            "generation": 82,
+            "train": {
+                "fitness": 0.6907747660799227,
+                "ndcg": 0.7260787412307136,
+                "rbp": 0.5595588654767591,
+                "success": 0.8586302486255047,
+                "nodes": 10,
+                "rejected": false
+            },
+            "test": {
+                "fitness": 0.6928182339165401,
+                "ndcg": 0.7238413999634525,
+                "rbp": 0.5787255697288898,
+                "success": 0.8474999999999999,
+                "nodes": 10,
+                "rejected": false
+            },
+            "median": 0.6690021077054567,
+            "championTrain": 0.6907747660799227,
+            "championTest": 0.6928182339165401,
+            "evaluated": 4650
+        },
+        {
+            "generation": 83,
+            "train": {
+                "fitness": 0.6910860090981801,
+                "ndcg": 0.7265093637619068,
+                "rbp": 0.5593925904432734,
+                "success": 0.8586302486255047,
+                "nodes": 10,
+                "rejected": false
+            },
+            "test": {
+                "fitness": 0.691392784437686,
+                "ndcg": 0.7222691308849893,
+                "rbp": 0.5778873986484727,
+                "success": 0.8474999999999999,
+                "nodes": 10,
+                "rejected": false
+            },
+            "median": 0.6732734465916396,
+            "championTrain": 0.6910860090981801,
+            "championTest": 0.691392784437686,
+            "evaluated": 4704
+        },
+        {
+            "generation": 84,
+            "train": {
+                "fitness": 0.6910860090981801,
+                "ndcg": 0.7265093637619068,
+                "rbp": 0.5593925904432734,
+                "success": 0.8586302486255047,
+                "nodes": 10,
+                "rejected": false
+            },
+            "test": {
+                "fitness": 0.691392784437686,
+                "ndcg": 0.7222691308849893,
+                "rbp": 0.5778873986484727,
+                "success": 0.8474999999999999,
+                "nodes": 10,
+                "rejected": false
+            },
+            "median": 0.6782240617881974,
+            "championTrain": 0.6910860090981801,
+            "championTest": 0.691392784437686,
+            "evaluated": 4758
+        },
+        {
+            "generation": 85,
+            "train": {
+                "fitness": 0.6910860090981801,
+                "ndcg": 0.7265093637619068,
+                "rbp": 0.5593925904432734,
+                "success": 0.8586302486255047,
+                "nodes": 10,
+                "rejected": false
+            },
+            "test": {
+                "fitness": 0.691392784437686,
+                "ndcg": 0.7222691308849893,
+                "rbp": 0.5778873986484727,
+                "success": 0.8474999999999999,
+                "nodes": 10,
+                "rejected": false
+            },
+            "median": 0.6794589710335397,
+            "championTrain": 0.6910860090981801,
+            "championTest": 0.691392784437686,
+            "evaluated": 4815
+        },
+        {
+            "generation": 86,
+            "train": {
+                "fitness": 0.6910860090981801,
+                "ndcg": 0.7265093637619068,
+                "rbp": 0.5593925904432734,
+                "success": 0.8586302486255047,
+                "nodes": 10,
+                "rejected": false
+            },
+            "test": {
+                "fitness": 0.691392784437686,
+                "ndcg": 0.7222691308849893,
+                "rbp": 0.5778873986484727,
+                "success": 0.8474999999999999,
+                "nodes": 10,
+                "rejected": false
+            },
+            "median": 0.6713368689820531,
+            "championTrain": 0.6910860090981801,
+            "championTest": 0.691392784437686,
+            "evaluated": 4871
+        },
+        {
+            "generation": 87,
+            "train": {
+                "fitness": 0.6912524494013583,
+                "ndcg": 0.7266781217710059,
+                "rbp": 0.5595497599227676,
+                "success": 0.8586302486255047,
+                "nodes": 10,
+                "rejected": false
+            },
+            "test": {
+                "fitness": 0.6907182910000406,
+                "ndcg": 0.7216954552495838,
+                "rbp": 0.5768096340018672,
+                "success": 0.8474999999999999,
+                "nodes": 10,
+                "rejected": false
+            },
+            "median": 0.6787555034401617,
+            "championTrain": 0.6912524494013583,
+            "championTest": 0.6907182910000406,
+            "evaluated": 4927
+        },
+        {
+            "generation": 88,
+            "train": {
+                "fitness": 0.6913690550902969,
+                "ndcg": 0.7275785473069843,
+                "rbp": 0.5615310862235469,
+                "success": 0.8586302486255047,
+                "nodes": 15,
+                "rejected": false
+            },
+            "test": {
+                "fitness": 0.6917452637277836,
+                "ndcg": 0.7237445429778072,
+                "rbp": 0.5787481467276889,
+                "success": 0.8474999999999999,
+                "nodes": 15,
+                "rejected": false
+            },
+            "median": 0.6838113106358175,
+            "championTrain": 0.6913690550902969,
+            "championTest": 0.6917452637277836,
+            "evaluated": 4983
+        },
+        {
+            "generation": 89,
+            "train": {
+                "fitness": 0.6913690550902969,
+                "ndcg": 0.7275785473069843,
+                "rbp": 0.5615310862235469,
+                "success": 0.8586302486255047,
+                "nodes": 15,
+                "rejected": false
+            },
+            "test": {
+                "fitness": 0.6917452637277836,
+                "ndcg": 0.7237445429778072,
+                "rbp": 0.5787481467276889,
+                "success": 0.8474999999999999,
+                "nodes": 15,
+                "rejected": false
+            },
+            "median": 0.6865599156870096,
+            "championTrain": 0.6913690550902969,
+            "championTest": 0.6917452637277836,
+            "evaluated": 5039
+        },
+        {
+            "generation": 90,
+            "train": {
+                "fitness": 0.6917203732042364,
+                "ndcg": 0.727880492717607,
+                "rbp": 0.5620798951507538,
+                "success": 0.8586302486255047,
+                "nodes": 15,
+                "rejected": false
+            },
+            "test": {
+                "fitness": 0.6916423778543296,
+                "ndcg": 0.7237214091602774,
+                "rbp": 0.5783262526305385,
+                "success": 0.8474999999999999,
+                "nodes": 15,
+                "rejected": false
+            },
+            "median": 0.6889501597991998,
+            "championTrain": 0.6917203732042364,
+            "championTest": 0.6916423778543296,
+            "evaluated": 5096
+        },
+        {
+            "generation": 91,
+            "train": {
+                "fitness": 0.6924334251771476,
+                "ndcg": 0.7284029021708339,
+                "rbp": 0.5635555172024018,
+                "success": 0.8586302486255047,
+                "nodes": 15,
+                "rejected": false
+            },
+            "test": {
+                "fitness": 0.6911796171300356,
+                "ndcg": 0.7229869807373276,
+                "rbp": 0.5789501627008677,
+                "success": 0.8474999999999999,
+                "nodes": 15,
+                "rejected": false
+            },
+            "median": 0.6900860090981801,
+            "championTrain": 0.6924334251771476,
+            "championTest": 0.6911796171300356,
+            "evaluated": 5152
+        },
+        {
+            "generation": 92,
+            "train": {
+                "fitness": 0.6924334251771476,
+                "ndcg": 0.7284029021708339,
+                "rbp": 0.5635555172024018,
+                "success": 0.8586302486255047,
+                "nodes": 15,
+                "rejected": false
+            },
+            "test": {
+                "fitness": 0.6911796171300356,
+                "ndcg": 0.7229869807373276,
+                "rbp": 0.5789501627008677,
+                "success": 0.8474999999999999,
+                "nodes": 15,
+                "rejected": false
+            },
+            "median": 0.6883546236221728,
+            "championTrain": 0.6924334251771476,
+            "championTest": 0.6911796171300356,
+            "evaluated": 5209
+        },
+        {
+            "generation": 93,
+            "train": {
+                "fitness": 0.6924334251771476,
+                "ndcg": 0.7284029021708339,
+                "rbp": 0.5635555172024018,
+                "success": 0.8586302486255047,
+                "nodes": 15,
+                "rejected": false
+            },
+            "test": {
+                "fitness": 0.6911796171300356,
+                "ndcg": 0.7229869807373276,
+                "rbp": 0.5789501627008677,
+                "success": 0.8474999999999999,
+                "nodes": 15,
+                "rejected": false
+            },
+            "median": 0.69007802877701,
+            "championTrain": 0.6924334251771476,
+            "championTest": 0.6911796171300356,
+            "evaluated": 5265
+        },
+        {
+            "generation": 94,
+            "train": {
+                "fitness": 0.6932334251771476,
+                "ndcg": 0.7284029021708339,
+                "rbp": 0.5635555172024018,
+                "success": 0.8586302486255047,
+                "nodes": 11,
+                "rejected": false
+            },
+            "test": {
+                "fitness": 0.6919796171300356,
+                "ndcg": 0.7229869807373276,
+                "rbp": 0.5789501627008677,
+                "success": 0.8474999999999999,
+                "nodes": 11,
+                "rejected": false
+            },
+            "median": 0.6831646604305034,
+            "championTrain": 0.6932334251771476,
+            "championTest": 0.6919796171300356,
+            "evaluated": 5323
+        },
+        {
+            "generation": 95,
+            "train": {
+                "fitness": 0.693594228789093,
+                "ndcg": 0.7292585391261636,
+                "rbp": 0.5659369874408109,
+                "success": 0.8586302486255047,
+                "nodes": 15,
+                "rejected": false
+            },
+            "test": {
+                "fitness": 0.6967282776346523,
+                "ndcg": 0.7273221416582583,
+                "rbp": 0.5893528215402281,
+                "success": 0.8775,
+                "nodes": 15,
+                "rejected": false
+            },
+            "median": 0.6881191027722635,
+            "championTrain": 0.693594228789093,
+            "championTest": 0.6967282776346523,
+            "evaluated": 5381
+        },
+        {
+            "generation": 96,
+            "train": {
+                "fitness": 0.693594228789093,
+                "ndcg": 0.7292585391261636,
+                "rbp": 0.5659369874408109,
+                "success": 0.8586302486255047,
+                "nodes": 15,
+                "rejected": false
+            },
+            "test": {
+                "fitness": 0.6967282776346523,
+                "ndcg": 0.7273221416582583,
+                "rbp": 0.5893528215402281,
+                "success": 0.8775,
+                "nodes": 15,
+                "rejected": false
+            },
+            "median": 0.6861255623384572,
+            "championTrain": 0.693594228789093,
+            "championTest": 0.6967282776346523,
+            "evaluated": 5436
+        },
+        {
+            "generation": 97,
+            "train": {
+                "fitness": 0.693594228789093,
+                "ndcg": 0.7292585391261636,
+                "rbp": 0.5659369874408109,
+                "success": 0.8586302486255047,
+                "nodes": 15,
+                "rejected": false
+            },
+            "test": {
+                "fitness": 0.6967282776346523,
+                "ndcg": 0.7273221416582583,
+                "rbp": 0.5893528215402281,
+                "success": 0.8775,
+                "nodes": 15,
+                "rejected": false
+            },
+            "median": 0.6908428585755344,
+            "championTrain": 0.693594228789093,
+            "championTest": 0.6967282776346523,
+            "evaluated": 5493
+        },
+        {
+            "generation": 98,
+            "train": {
+                "fitness": 0.6940796877503445,
+                "ndcg": 0.7286434653660108,
+                "rbp": 0.5658245772876792,
+                "success": 0.8586302486255047,
+                "nodes": 10,
+                "rejected": false
+            },
+            "test": {
+                "fitness": 0.6918218712599804,
+                "ndcg": 0.7227549854195626,
+                "rbp": 0.5780894146216516,
+                "success": 0.8474999999999999,
+                "nodes": 10,
+                "rejected": false
+            },
+            "median": 0.6911231832777721,
+            "championTrain": 0.6940796877503445,
+            "championTest": 0.6918218712599804,
+            "evaluated": 5549
+        },
+        {
+            "generation": 99,
+            "train": {
+                "fitness": 0.6943295354902657,
+                "ndcg": 0.729185466309804,
+                "rbp": 0.5659058122121121,
+                "success": 0.8586302486255047,
+                "nodes": 11,
+                "rejected": false
+            },
+            "test": {
+                "fitness": 0.6929778694156672,
+                "ndcg": 0.7240235288020899,
+                "rbp": 0.5797952318699764,
+                "success": 0.8474999999999999,
+                "nodes": 11,
+                "rejected": false
+            },
+            "median": 0.6825284388949974,
+            "championTrain": 0.6943295354902657,
+            "championTest": 0.6929778694156672,
+            "evaluated": 5606
+        },
+        {
+            "generation": 100,
+            "train": {
+                "fitness": 0.6943295354902657,
+                "ndcg": 0.729185466309804,
+                "rbp": 0.5659058122121121,
+                "success": 0.8586302486255047,
+                "nodes": 11,
+                "rejected": false
+            },
+            "test": {
+                "fitness": 0.6929778694156672,
+                "ndcg": 0.7240235288020899,
+                "rbp": 0.5797952318699764,
+                "success": 0.8474999999999999,
+                "nodes": 11,
+                "rejected": false
+            },
+            "median": 0.687551439610397,
+            "championTrain": 0.6943295354902657,
+            "championTest": 0.6929778694156672,
+            "evaluated": 5663
+        },
+        {
+            "generation": 101,
+            "train": {
+                "fitness": 0.6943295354902657,
+                "ndcg": 0.729185466309804,
+                "rbp": 0.5659058122121121,
+                "success": 0.8586302486255047,
+                "nodes": 11,
+                "rejected": false
+            },
+            "test": {
+                "fitness": 0.6929778694156672,
+                "ndcg": 0.7240235288020899,
+                "rbp": 0.5797952318699764,
+                "success": 0.8474999999999999,
+                "nodes": 11,
+                "rejected": false
+            },
+            "median": 0.6866098287294425,
+            "championTrain": 0.6943295354902657,
+            "championTest": 0.6929778694156672,
+            "evaluated": 5719
+        },
+        {
+            "generation": 102,
+            "train": {
+                "fitness": 0.6943295354902657,
+                "ndcg": 0.729185466309804,
+                "rbp": 0.5659058122121121,
+                "success": 0.8586302486255047,
+                "nodes": 11,
+                "rejected": false
+            },
+            "test": {
+                "fitness": 0.6929778694156672,
+                "ndcg": 0.7240235288020899,
+                "rbp": 0.5797952318699764,
+                "success": 0.8474999999999999,
+                "nodes": 11,
+                "rejected": false
+            },
+            "median": 0.6890667313634236,
+            "championTrain": 0.6943295354902657,
+            "championTest": 0.6929778694156672,
+            "evaluated": 5776
+        },
+        {
+            "generation": 103,
+            "train": {
+                "fitness": 0.6946858009117509,
+                "ndcg": 0.7301256897517243,
+                "rbp": 0.5689262455518572,
+                "success": 0.8586302486255047,
+                "nodes": 16,
+                "rejected": false
+            },
+            "test": {
+                "fitness": 0.7069320891386216,
+                "ndcg": 0.7377772038248759,
+                "rbp": 0.5995516303936046,
+                "success": 0.8775,
+                "nodes": 16,
+                "rejected": false
+            },
+            "median": 0.6911218938433717,
+            "championTrain": 0.6946858009117509,
+            "championTest": 0.7069320891386216,
+            "evaluated": 5834
+        },
+        {
+            "generation": 104,
+            "train": {
+                "fitness": 0.6946858009117509,
+                "ndcg": 0.7301256897517243,
+                "rbp": 0.5689262455518572,
+                "success": 0.8586302486255047,
+                "nodes": 16,
+                "rejected": false
+            },
+            "test": {
+                "fitness": 0.7069320891386216,
+                "ndcg": 0.7377772038248759,
+                "rbp": 0.5995516303936046,
+                "success": 0.8775,
+                "nodes": 16,
+                "rejected": false
+            },
+            "median": 0.687790631844227,
+            "championTrain": 0.6946858009117509,
+            "championTest": 0.7069320891386216,
+            "evaluated": 5891
+        },
+        {
+            "generation": 105,
+            "train": {
+                "fitness": 0.6954905732066391,
+                "ndcg": 0.7307635227472205,
+                "rbp": 0.5713987750443135,
+                "success": 0.8586302486255047,
+                "nodes": 17,
+                "rejected": false
+            },
+            "test": {
+                "fitness": 0.7067320891386216,
+                "ndcg": 0.7377772038248759,
+                "rbp": 0.5995516303936046,
+                "success": 0.8775,
+                "nodes": 17,
+                "rejected": false
+            },
+            "median": 0.6885847015142751,
+            "championTrain": 0.6954905732066391,
+            "championTest": 0.7067320891386216,
+            "evaluated": 5948
+        },
+        {
+            "generation": 106,
+            "train": {
+                "fitness": 0.6954905732066391,
+                "ndcg": 0.7307635227472205,
+                "rbp": 0.5713987750443135,
+                "success": 0.8586302486255047,
+                "nodes": 17,
+                "rejected": false
+            },
+            "test": {
+                "fitness": 0.7067320891386216,
+                "ndcg": 0.7377772038248759,
+                "rbp": 0.5995516303936046,
+                "success": 0.8775,
+                "nodes": 17,
+                "rejected": false
+            },
+            "median": 0.6881103071419893,
+            "championTrain": 0.6954905732066391,
+            "championTest": 0.7067320891386216,
+            "evaluated": 6005
+        },
+        {
+            "generation": 107,
+            "train": {
+                "fitness": 0.6954905732066391,
+                "ndcg": 0.7307635227472205,
+                "rbp": 0.5713987750443135,
+                "success": 0.8586302486255047,
+                "nodes": 17,
+                "rejected": false
+            },
+            "test": {
+                "fitness": 0.7067320891386216,
+                "ndcg": 0.7377772038248759,
+                "rbp": 0.5995516303936046,
+                "success": 0.8775,
+                "nodes": 17,
+                "rejected": false
+            },
+            "median": 0.6898460126809408,
+            "championTrain": 0.6954905732066391,
+            "championTest": 0.7067320891386216,
+            "evaluated": 6062
+        },
+        {
+            "generation": 108,
+            "train": {
+                "fitness": 0.6967667052887803,
+                "ndcg": 0.7324643799331559,
+                "rbp": 0.5649760067112776,
+                "success": 0.8586302486255047,
+                "nodes": 11,
+                "rejected": false
+            },
+            "test": {
+                "fitness": 0.6905893743269305,
+                "ndcg": 0.7205217232497353,
+                "rbp": 0.5818599786357108,
+                "success": 0.8474999999999999,
+                "nodes": 11,
+                "rejected": false
+            },
+            "median": 0.6896662583997316,
+            "championTrain": 0.6967667052887803,
+            "championTest": 0.6905893743269305,
+            "evaluated": 6120
+        },
+        {
+            "generation": 109,
+            "train": {
+                "fitness": 0.6995927682844423,
+                "ndcg": 0.7359251094001324,
+                "rbp": 0.5712634038216814,
+                "success": 0.8657270228190531,
+                "nodes": 17,
+                "rejected": false
+            },
+            "test": {
+                "fitness": 0.7060343610536907,
+                "ndcg": 0.7355470292830496,
+                "rbp": 0.6049836881362549,
+                "success": 0.8775,
+                "nodes": 17,
+                "rejected": false
+            },
+            "median": 0.6938240278003295,
+            "championTrain": 0.6995927682844423,
+            "championTest": 0.7060343610536907,
+            "evaluated": 6177
+        },
+        {
+            "generation": 110,
+            "train": {
+                "fitness": 0.7002979658598444,
+                "ndcg": 0.7370901008148377,
+                "rbp": 0.5701294260398706,
+                "success": 0.8657270228190531,
+                "nodes": 17,
+                "rejected": false
+            },
+            "test": {
+                "fitness": 0.7106779496203447,
+                "ndcg": 0.743199490008301,
+                "rbp": 0.5975917880685193,
+                "success": 0.8775,
+                "nodes": 17,
+                "rejected": false
+            },
+            "median": 0.693674530006197,
+            "championTrain": 0.7002979658598444,
+            "championTest": 0.7106779496203447,
+            "evaluated": 6234
+        },
+        {
+            "generation": 111,
+            "train": {
+                "fitness": 0.7002979658598444,
+                "ndcg": 0.7370901008148377,
+                "rbp": 0.5701294260398706,
+                "success": 0.8657270228190531,
+                "nodes": 17,
+                "rejected": false
+            },
+            "test": {
+                "fitness": 0.7106779496203447,
+                "ndcg": 0.743199490008301,
+                "rbp": 0.5975917880685193,
+                "success": 0.8775,
+                "nodes": 17,
+                "rejected": false
+            },
+            "median": 0.693224121102991,
+            "championTrain": 0.7002979658598444,
+            "championTest": 0.7106779496203447,
+            "evaluated": 6291
+        },
+        {
+            "generation": 112,
+            "train": {
+                "fitness": 0.7020719606404876,
+                "ndcg": 0.7385565854024575,
+                "rbp": 0.5741334615926079,
+                "success": 0.8657270228190531,
+                "nodes": 18,
+                "rejected": false
+            },
+            "test": {
+                "fitness": 0.7104779496203446,
+                "ndcg": 0.743199490008301,
+                "rbp": 0.5975917880685193,
+                "success": 0.8775,
+                "nodes": 18,
+                "rejected": false
+            },
+            "median": 0.6944905732066391,
+            "championTrain": 0.7020719606404876,
+            "championTest": 0.7104779496203446,
+            "evaluated": 6346
+        },
+        {
+            "generation": 113,
+            "train": {
+                "fitness": 0.7020719606404876,
+                "ndcg": 0.7385565854024575,
+                "rbp": 0.5741334615926079,
+                "success": 0.8657270228190531,
+                "nodes": 18,
+                "rejected": false
+            },
+            "test": {
+                "fitness": 0.7104779496203446,
+                "ndcg": 0.743199490008301,
+                "rbp": 0.5975917880685193,
+                "success": 0.8775,
+                "nodes": 18,
+                "rejected": false
+            },
+            "median": 0.6958126367062041,
+            "championTrain": 0.7020719606404876,
+            "championTest": 0.7104779496203446,
+            "evaluated": 6402
+        },
+        {
+            "generation": 114,
+            "train": {
+                "fitness": 0.7020719606404876,
+                "ndcg": 0.7385565854024575,
+                "rbp": 0.5741334615926079,
+                "success": 0.8657270228190531,
+                "nodes": 18,
+                "rejected": false
+            },
+            "test": {
+                "fitness": 0.7104779496203446,
+                "ndcg": 0.743199490008301,
+                "rbp": 0.5975917880685193,
+                "success": 0.8775,
+                "nodes": 18,
+                "rejected": false
+            },
+            "median": 0.6971245874316695,
+            "championTrain": 0.7020719606404876,
+            "championTest": 0.7104779496203446,
+            "evaluated": 6458
+        },
+        {
+            "generation": 115,
+            "train": {
+                "fitness": 0.7020719606404876,
+                "ndcg": 0.7385565854024575,
+                "rbp": 0.5741334615926079,
+                "success": 0.8657270228190531,
+                "nodes": 18,
+                "rejected": false
+            },
+            "test": {
+                "fitness": 0.7104779496203446,
+                "ndcg": 0.743199490008301,
+                "rbp": 0.5975917880685193,
+                "success": 0.8775,
+                "nodes": 18,
+                "rejected": false
+            },
+            "median": 0.697763427951181,
+            "championTrain": 0.7020719606404876,
+            "championTest": 0.7104779496203446,
+            "evaluated": 6513
+        },
+        {
+            "generation": 116,
+            "train": {
+                "fitness": 0.7022719606404877,
+                "ndcg": 0.7385565854024575,
+                "rbp": 0.5741334615926079,
+                "success": 0.8657270228190531,
+                "nodes": 17,
+                "rejected": false
+            },
+            "test": {
+                "fitness": 0.7106779496203447,
+                "ndcg": 0.743199490008301,
+                "rbp": 0.5975917880685193,
+                "success": 0.8775,
+                "nodes": 17,
+                "rejected": false
+            },
+            "median": 0.6967245874316694,
+            "championTrain": 0.7022719606404877,
+            "championTest": 0.7106779496203447,
+            "evaluated": 6569
+        },
+        {
+            "generation": 117,
+            "train": {
+                "fitness": 0.7022719606404877,
+                "ndcg": 0.7385565854024575,
+                "rbp": 0.5741334615926079,
+                "success": 0.8657270228190531,
+                "nodes": 17,
+                "rejected": false
+            },
+            "test": {
+                "fitness": 0.7106779496203447,
+                "ndcg": 0.743199490008301,
+                "rbp": 0.5975917880685193,
+                "success": 0.8775,
+                "nodes": 17,
+                "rejected": false
+            },
+            "median": 0.6960113340463618,
+            "championTrain": 0.7022719606404877,
+            "championTest": 0.7106779496203447,
+            "evaluated": 6625
+        },
+        {
+            "generation": 118,
+            "train": {
+                "fitness": 0.7023223977578748,
+                "ndcg": 0.7389581244589848,
+                "rbp": 0.5737794909534351,
+                "success": 0.8657270228190531,
+                "nodes": 18,
+                "rejected": false
+            },
+            "test": {
+                "fitness": 0.7119084040694209,
+                "ndcg": 0.7447589659568052,
+                "rbp": 0.5985061565198834,
+                "success": 0.8775,
+                "nodes": 18,
+                "rejected": false
+            },
+            "median": 0.6971245874316695,
+            "championTrain": 0.7023223977578748,
+            "championTest": 0.7119084040694209,
+            "evaluated": 6682
+        },
+        {
+            "generation": 119,
+            "train": {
+                "fitness": 0.702802554177847,
+                "ndcg": 0.738906381785139,
+                "rbp": 0.5733872437486783,
+                "success": 0.8657270228190531,
+                "nodes": 15,
+                "rejected": false
+            },
+            "test": {
+                "fitness": 0.7181129305284718,
+                "ndcg": 0.7511106167497703,
+                "rbp": 0.6011221856432775,
+                "success": 0.8775,
+                "nodes": 15,
+                "rejected": false
+            },
+            "median": 0.6986149198677277,
+            "championTrain": 0.702802554177847,
+            "championTest": 0.7181129305284718,
+            "evaluated": 6740
+        },
+        {
+            "generation": 120,
+            "train": {
+                "fitness": 0.702802554177847,
+                "ndcg": 0.738906381785139,
+                "rbp": 0.5733872437486783,
+                "success": 0.8657270228190531,
+                "nodes": 15,
+                "rejected": false
+            },
+            "test": {
+                "fitness": 0.7181129305284718,
+                "ndcg": 0.7511106167497703,
+                "rbp": 0.6011221856432775,
+                "success": 0.8775,
+                "nodes": 15,
+                "rejected": false
+            },
+            "median": 0.6991528551434987,
+            "championTrain": 0.702802554177847,
+            "championTest": 0.7181129305284718,
+            "evaluated": 6797
+        },
+        {
+            "generation": 121,
+            "train": {
+                "fitness": 0.7030111052576505,
+                "ndcg": 0.73903890486609,
+                "rbp": 0.5738999068238925,
+                "success": 0.8657270228190531,
+                "nodes": 15,
+                "rejected": false
+            },
+            "test": {
+                "fitness": 0.7179360693119691,
+                "ndcg": 0.7510085986212467,
+                "rbp": 0.6006459520748587,
+                "success": 0.8775,
+                "nodes": 15,
+                "rejected": false
+            },
+            "median": 0.6993528551434987,
+            "championTrain": 0.7030111052576505,
+            "championTest": 0.7179360693119691,
+            "evaluated": 6852
+        },
+        {
+            "generation": 122,
+            "train": {
+                "fitness": 0.7030111052576505,
+                "ndcg": 0.73903890486609,
+                "rbp": 0.5738999068238925,
+                "success": 0.8657270228190531,
+                "nodes": 15,
+                "rejected": false
+            },
+            "test": {
+                "fitness": 0.7179360693119691,
+                "ndcg": 0.7510085986212467,
+                "rbp": 0.6006459520748587,
+                "success": 0.8775,
+                "nodes": 15,
+                "rejected": false
+            },
+            "median": 0.6981508215779973,
+            "championTrain": 0.7030111052576505,
+            "championTest": 0.7179360693119691,
+            "evaluated": 6907
+        },
+        {
+            "generation": 123,
+            "train": {
+                "fitness": 0.7030358103800257,
+                "ndcg": 0.7389622983133222,
+                "rbp": 0.57432985864684,
+                "success": 0.8657270228190531,
+                "nodes": 15,
+                "rejected": false
+            },
+            "test": {
+                "fitness": 0.7085016501397817,
+                "ndcg": 0.7401863654512609,
+                "rbp": 0.5967627888938645,
+                "success": 0.8775,
+                "nodes": 15,
+                "rejected": false
+            },
+            "median": 0.6975508215779974,
+            "championTrain": 0.7030358103800257,
+            "championTest": 0.7085016501397817,
+            "evaluated": 6963
+        },
+        {
+            "generation": 124,
+            "train": {
+                "fitness": 0.7030358103800257,
+                "ndcg": 0.7389622983133222,
+                "rbp": 0.57432985864684,
+                "success": 0.8657270228190531,
+                "nodes": 15,
+                "rejected": false
+            },
+            "test": {
+                "fitness": 0.7085016501397817,
+                "ndcg": 0.7401863654512609,
+                "rbp": 0.5967627888938645,
+                "success": 0.8775,
+                "nodes": 15,
+                "rejected": false
+            },
+            "median": 0.6975508215779974,
+            "championTrain": 0.7030358103800257,
+            "championTest": 0.7085016501397817,
+            "evaluated": 7019
+        },
+        {
+            "generation": 125,
+            "train": {
+                "fitness": 0.7030358103800257,
+                "ndcg": 0.7389622983133222,
+                "rbp": 0.57432985864684,
+                "success": 0.8657270228190531,
+                "nodes": 15,
+                "rejected": false
+            },
+            "test": {
+                "fitness": 0.7085016501397817,
+                "ndcg": 0.7401863654512609,
+                "rbp": 0.5967627888938645,
+                "success": 0.8775,
+                "nodes": 15,
+                "rejected": false
+            },
+            "median": 0.6981133684229022,
+            "championTrain": 0.7030358103800257,
+            "championTest": 0.7085016501397817,
+            "evaluated": 7075
+        },
+        {
+            "generation": 126,
+            "train": {
+                "fitness": 0.7030358103800257,
+                "ndcg": 0.7389622983133222,
+                "rbp": 0.57432985864684,
+                "success": 0.8657270228190531,
+                "nodes": 15,
+                "rejected": false
+            },
+            "test": {
+                "fitness": 0.7085016501397817,
+                "ndcg": 0.7401863654512609,
+                "rbp": 0.5967627888938645,
+                "success": 0.8775,
+                "nodes": 15,
+                "rejected": false
+            },
+            "median": 0.6970825440044986,
+            "championTrain": 0.7030358103800257,
+            "championTest": 0.7085016501397817,
+            "evaluated": 7128
+        },
+        {
+            "generation": 127,
+            "train": {
+                "fitness": 0.7032111052576505,
+                "ndcg": 0.73903890486609,
+                "rbp": 0.5738999068238925,
+                "success": 0.8657270228190531,
+                "nodes": 14,
+                "rejected": false
+            },
+            "test": {
+                "fitness": 0.718136069311969,
+                "ndcg": 0.7510085986212467,
+                "rbp": 0.6006459520748587,
+                "success": 0.8775,
+                "nodes": 14,
+                "rejected": false
+            },
+            "median": 0.6977596088905782,
+            "championTrain": 0.7032111052576505,
+            "championTest": 0.718136069311969,
+            "evaluated": 7182
+        },
+        {
+            "generation": 128,
+            "train": {
+                "fitness": 0.7032510627026244,
+                "ndcg": 0.7397313637165704,
+                "rbp": 0.57432985864684,
+                "success": 0.8698936894857198,
+                "nodes": 17,
+                "rejected": false
+            },
+            "test": {
+                "fitness": 0.7081016501397818,
+                "ndcg": 0.7401863654512609,
+                "rbp": 0.5967627888938645,
+                "success": 0.8775,
+                "nodes": 17,
+                "rejected": false
+            },
+            "median": 0.696331764859341,
+            "championTrain": 0.7032510627026244,
+            "championTest": 0.7081016501397818,
+            "evaluated": 7238
+        },
+        {
+            "generation": 129,
+            "train": {
+                "fitness": 0.7043591082053038,
+                "ndcg": 0.7402226309349512,
+                "rbp": 0.5759050172867141,
+                "success": 0.8657270228190531,
+                "nodes": 15,
+                "rejected": false
+            },
+            "test": {
+                "fitness": 0.6990867865293697,
+                "ndcg": 0.7283417242662532,
+                "rbp": 0.5970670355818357,
+                "success": 0.8775,
+                "nodes": 15,
+                "rejected": false
+            },
+            "median": 0.6962485297794682,
+            "championTrain": 0.7043591082053038,
+            "championTest": 0.6990867865293697,
+            "evaluated": 7295
+        },
+        {
+            "generation": 130,
+            "train": {
+                "fitness": 0.7043591082053038,
+                "ndcg": 0.7402226309349512,
+                "rbp": 0.5759050172867141,
+                "success": 0.8657270228190531,
+                "nodes": 15,
+                "rejected": false
+            },
+            "test": {
+                "fitness": 0.6990867865293697,
+                "ndcg": 0.7283417242662532,
+                "rbp": 0.5970670355818357,
+                "success": 0.8775,
+                "nodes": 15,
+                "rejected": false
+            },
+            "median": 0.6965822497914397,
+            "championTrain": 0.7043591082053038,
+            "championTest": 0.6990867865293697,
+            "evaluated": 7352
+        },
+        {
+            "generation": 131,
+            "train": {
+                "fitness": 0.7043591082053038,
+                "ndcg": 0.7402226309349512,
+                "rbp": 0.5759050172867141,
+                "success": 0.8657270228190531,
+                "nodes": 15,
+                "rejected": false
+            },
+            "test": {
+                "fitness": 0.6990867865293697,
+                "ndcg": 0.7283417242662532,
+                "rbp": 0.5970670355818357,
+                "success": 0.8775,
+                "nodes": 15,
+                "rejected": false
+            },
+            "median": 0.6977014448169947,
+            "championTrain": 0.7043591082053038,
+            "championTest": 0.6990867865293697,
+            "evaluated": 7409
+        },
+        {
+            "generation": 132,
+            "train": {
+                "fitness": 0.7043591082053038,
+                "ndcg": 0.7402226309349512,
+                "rbp": 0.5759050172867141,
+                "success": 0.8657270228190531,
+                "nodes": 15,
+                "rejected": false
+            },
+            "test": {
+                "fitness": 0.6990867865293697,
+                "ndcg": 0.7283417242662532,
+                "rbp": 0.5970670355818357,
+                "success": 0.8775,
+                "nodes": 15,
+                "rejected": false
+            },
+            "median": 0.6998861143523624,
+            "championTrain": 0.7043591082053038,
+            "championTest": 0.6990867865293697,
+            "evaluated": 7465
+        },
+        {
+            "generation": 133,
+            "train": {
+                "fitness": 0.7043591082053038,
+                "ndcg": 0.7402226309349512,
+                "rbp": 0.5759050172867141,
+                "success": 0.8657270228190531,
+                "nodes": 15,
+                "rejected": false
+            },
+            "test": {
+                "fitness": 0.6990867865293697,
+                "ndcg": 0.7283417242662532,
+                "rbp": 0.5970670355818357,
+                "success": 0.8775,
+                "nodes": 15,
+                "rejected": false
+            },
+            "median": 0.701143653797787,
+            "championTrain": 0.7043591082053038,
+            "championTest": 0.6990867865293697,
+            "evaluated": 7521
+        },
+        {
+            "generation": 134,
+            "train": {
+                "fitness": 0.7056792305856551,
+                "ndcg": 0.7416370855439282,
+                "rbp": 0.5768478107525626,
+                "success": 0.8657270228190531,
+                "nodes": 15,
+                "rejected": false
+            },
+            "test": {
+                "fitness": 0.706849493618746,
+                "ndcg": 0.7388945965064698,
+                "rbp": 0.593669082067851,
+                "success": 0.8775,
+                "nodes": 15,
+                "rejected": false
+            },
+            "median": 0.6965669974688411,
+            "championTrain": 0.7056792305856551,
+            "championTest": 0.706849493618746,
+            "evaluated": 7578
+        },
+        {
+            "generation": 135,
+            "train": {
+                "fitness": 0.7056792305856551,
+                "ndcg": 0.7416370855439282,
+                "rbp": 0.5768478107525626,
+                "success": 0.8657270228190531,
+                "nodes": 15,
+                "rejected": false
+            },
+            "test": {
+                "fitness": 0.706849493618746,
+                "ndcg": 0.7388945965064698,
+                "rbp": 0.593669082067851,
+                "success": 0.8775,
+                "nodes": 15,
+                "rejected": false
+            },
+            "median": 0.6981020100846899,
+            "championTrain": 0.7056792305856551,
+            "championTest": 0.706849493618746,
+            "evaluated": 7635
+        },
+        {
+            "generation": 136,
+            "train": {
+                "fitness": 0.7056792305856551,
+                "ndcg": 0.7416370855439282,
+                "rbp": 0.5768478107525626,
+                "success": 0.8657270228190531,
+                "nodes": 15,
+                "rejected": false
+            },
+            "test": {
+                "fitness": 0.706849493618746,
+                "ndcg": 0.7388945965064698,
+                "rbp": 0.593669082067851,
+                "success": 0.8775,
+                "nodes": 15,
+                "rejected": false
+            },
+            "median": 0.7016075211329014,
+            "championTrain": 0.7056792305856551,
+            "championTest": 0.706849493618746,
+            "evaluated": 7692
+        },
+        {
+            "generation": 137,
+            "train": {
+                "fitness": 0.7056792305856551,
+                "ndcg": 0.7416370855439282,
+                "rbp": 0.5768478107525626,
+                "success": 0.8657270228190531,
+                "nodes": 15,
+                "rejected": false
+            },
+            "test": {
+                "fitness": 0.706849493618746,
+                "ndcg": 0.7388945965064698,
+                "rbp": 0.593669082067851,
+                "success": 0.8775,
+                "nodes": 15,
+                "rejected": false
+            },
+            "median": 0.6991019343574715,
+            "championTrain": 0.7056792305856551,
+            "championTest": 0.706849493618746,
+            "evaluated": 7749
+        },
+        {
+            "generation": 138,
+            "train": {
+                "fitness": 0.7056792305856551,
+                "ndcg": 0.7416370855439282,
+                "rbp": 0.5768478107525626,
+                "success": 0.8657270228190531,
+                "nodes": 15,
+                "rejected": false
+            },
+            "test": {
+                "fitness": 0.706849493618746,
+                "ndcg": 0.7388945965064698,
+                "rbp": 0.593669082067851,
+                "success": 0.8775,
+                "nodes": 15,
+                "rejected": false
+            },
+            "median": 0.686184096709562,
+            "championTrain": 0.7056792305856551,
+            "championTest": 0.706849493618746,
+            "evaluated": 7804
+        },
+        {
+            "generation": 139,
+            "train": {
+                "fitness": 0.7056792305856551,
+                "ndcg": 0.7416370855439282,
+                "rbp": 0.5768478107525626,
+                "success": 0.8657270228190531,
+                "nodes": 15,
+                "rejected": false
+            },
+            "test": {
+                "fitness": 0.706849493618746,
+                "ndcg": 0.7388945965064698,
+                "rbp": 0.593669082067851,
+                "success": 0.8775,
+                "nodes": 15,
+                "rejected": false
+            },
+            "median": 0.698468371795316,
+            "championTrain": 0.7056792305856551,
+            "championTest": 0.706849493618746,
+            "evaluated": 7861
+        },
+        {
+            "generation": 140,
+            "train": {
+                "fitness": 0.7056792305856551,
+                "ndcg": 0.7416370855439282,
+                "rbp": 0.5768478107525626,
+                "success": 0.8657270228190531,
+                "nodes": 15,
+                "rejected": false
+            },
+            "test": {
+                "fitness": 0.706849493618746,
+                "ndcg": 0.7388945965064698,
+                "rbp": 0.593669082067851,
+                "success": 0.8775,
+                "nodes": 15,
+                "rejected": false
+            },
+            "median": 0.7000564898142192,
+            "championTrain": 0.7056792305856551,
+            "championTest": 0.706849493618746,
+            "evaluated": 7916
+        },
+        {
+            "generation": 141,
+            "train": {
+                "fitness": 0.7056792305856551,
+                "ndcg": 0.7416370855439282,
+                "rbp": 0.5768478107525626,
+                "success": 0.8657270228190531,
+                "nodes": 15,
+                "rejected": false
+            },
+            "test": {
+                "fitness": 0.706849493618746,
+                "ndcg": 0.7388945965064698,
+                "rbp": 0.593669082067851,
+                "success": 0.8775,
+                "nodes": 15,
+                "rejected": false
+            },
+            "median": 0.6997933732151952,
+            "championTrain": 0.7056792305856551,
+            "championTest": 0.706849493618746,
+            "evaluated": 7973
+        },
+        {
+            "generation": 142,
+            "train": {
+                "fitness": 0.7056792305856551,
+                "ndcg": 0.7416370855439282,
+                "rbp": 0.5768478107525626,
+                "success": 0.8657270228190531,
+                "nodes": 15,
+                "rejected": false
+            },
+            "test": {
+                "fitness": 0.706849493618746,
+                "ndcg": 0.7388945965064698,
+                "rbp": 0.593669082067851,
+                "success": 0.8775,
+                "nodes": 15,
+                "rejected": false
+            },
+            "median": 0.6990783640665593,
+            "championTrain": 0.7056792305856551,
+            "championTest": 0.706849493618746,
+            "evaluated": 8031
+        },
+        {
+            "generation": 143,
+            "train": {
+                "fitness": 0.7067022700135311,
+                "ndcg": 0.7422815191140703,
+                "rbp": 0.5793852736113749,
+                "success": 0.8657270228190531,
+                "nodes": 15,
+                "rejected": false
+            },
+            "test": {
+                "fitness": 0.706849493618746,
+                "ndcg": 0.7388945965064698,
+                "rbp": 0.593669082067851,
+                "success": 0.8775,
+                "nodes": 15,
+                "rejected": false
+            },
+            "median": 0.6958135115565445,
+            "championTrain": 0.7067022700135311,
+            "championTest": 0.706849493618746,
+            "evaluated": 8088
+        },
+        {
+            "generation": 144,
+            "train": {
+                "fitness": 0.7067022700135311,
+                "ndcg": 0.7422815191140703,
+                "rbp": 0.5793852736113749,
+                "success": 0.8657270228190531,
+                "nodes": 15,
+                "rejected": false
+            },
+            "test": {
+                "fitness": 0.706849493618746,
+                "ndcg": 0.7388945965064698,
+                "rbp": 0.593669082067851,
+                "success": 0.8775,
+                "nodes": 15,
+                "rejected": false
+            },
+            "median": 0.6960125863298537,
+            "championTrain": 0.7067022700135311,
+            "championTest": 0.706849493618746,
+            "evaluated": 8144
+        },
+        {
+            "generation": 145,
+            "train": {
+                "fitness": 0.7067022700135311,
+                "ndcg": 0.7422815191140703,
+                "rbp": 0.5793852736113749,
+                "success": 0.8657270228190531,
+                "nodes": 15,
+                "rejected": false
+            },
+            "test": {
+                "fitness": 0.706849493618746,
+                "ndcg": 0.7388945965064698,
+                "rbp": 0.593669082067851,
+                "success": 0.8775,
+                "nodes": 15,
+                "rejected": false
+            },
+            "median": 0.6992783640665593,
+            "championTrain": 0.7067022700135311,
+            "championTest": 0.706849493618746,
+            "evaluated": 8202
+        },
+        {
+            "generation": 146,
+            "train": {
+                "fitness": 0.7067022700135311,
+                "ndcg": 0.7422815191140703,
+                "rbp": 0.5793852736113749,
+                "success": 0.8657270228190531,
+                "nodes": 15,
+                "rejected": false
+            },
+            "test": {
+                "fitness": 0.706849493618746,
+                "ndcg": 0.7388945965064698,
+                "rbp": 0.593669082067851,
+                "success": 0.8775,
+                "nodes": 15,
+                "rejected": false
+            },
+            "median": 0.7012763180803147,
+            "championTrain": 0.7067022700135311,
+            "championTest": 0.706849493618746,
+            "evaluated": 8256
+        },
+        {
+            "generation": 147,
+            "train": {
+                "fitness": 0.7069022700135311,
+                "ndcg": 0.7422815191140703,
+                "rbp": 0.5793852736113749,
+                "success": 0.8657270228190531,
+                "nodes": 14,
+                "rejected": false
+            },
+            "test": {
+                "fitness": 0.707049493618746,
+                "ndcg": 0.7388945965064698,
+                "rbp": 0.593669082067851,
+                "success": 0.8775,
+                "nodes": 14,
+                "rejected": false
+            },
+            "median": 0.6991277381458926,
+            "championTrain": 0.7069022700135311,
+            "championTest": 0.707049493618746,
+            "evaluated": 8313
+        },
+        {
+            "generation": 148,
+            "train": {
+                "fitness": 0.7069022700135311,
+                "ndcg": 0.7422815191140703,
+                "rbp": 0.5793852736113749,
+                "success": 0.8657270228190531,
+                "nodes": 14,
+                "rejected": false
+            },
+            "test": {
+                "fitness": 0.707049493618746,
+                "ndcg": 0.7388945965064698,
+                "rbp": 0.593669082067851,
+                "success": 0.8775,
+                "nodes": 14,
+                "rejected": false
+            },
+            "median": 0.7004023362762959,
+            "championTrain": 0.7069022700135311,
+            "championTest": 0.707049493618746,
+            "evaluated": 8368
+        },
+        {
+            "generation": 149,
+            "train": {
+                "fitness": 0.7069022700135311,
+                "ndcg": 0.7422815191140703,
+                "rbp": 0.5793852736113749,
+                "success": 0.8657270228190531,
+                "nodes": 14,
+                "rejected": false
+            },
+            "test": {
+                "fitness": 0.707049493618746,
+                "ndcg": 0.7388945965064698,
+                "rbp": 0.593669082067851,
+                "success": 0.8775,
+                "nodes": 14,
+                "rejected": false
+            },
+            "median": 0.7009221211709296,
+            "championTrain": 0.7069022700135311,
+            "championTest": 0.707049493618746,
+            "evaluated": 8425
+        },
+        {
+            "generation": 150,
+            "train": {
+                "fitness": 0.7069022700135311,
+                "ndcg": 0.7422815191140703,
+                "rbp": 0.5793852736113749,
+                "success": 0.8657270228190531,
+                "nodes": 14,
+                "rejected": false
+            },
+            "test": {
+                "fitness": 0.707049493618746,
+                "ndcg": 0.7388945965064698,
+                "rbp": 0.593669082067851,
+                "success": 0.8775,
+                "nodes": 14,
+                "rejected": false
+            },
+            "median": 0.6977570877464387,
+            "championTrain": 0.7069022700135311,
+            "championTest": 0.707049493618746,
+            "evaluated": 8483
+        },
+        {
+            "generation": 151,
+            "train": {
+                "fitness": 0.7069022700135311,
+                "ndcg": 0.7422815191140703,
+                "rbp": 0.5793852736113749,
+                "success": 0.8657270228190531,
+                "nodes": 14,
+                "rejected": false
+            },
+            "test": {
+                "fitness": 0.707049493618746,
+                "ndcg": 0.7388945965064698,
+                "rbp": 0.593669082067851,
+                "success": 0.8775,
+                "nodes": 14,
+                "rejected": false
+            },
+            "median": 0.7020179842403136,
+            "championTrain": 0.7069022700135311,
+            "championTest": 0.707049493618746,
+            "evaluated": 8538
+        },
+        {
+            "generation": 152,
+            "train": {
+                "fitness": 0.7069022700135311,
+                "ndcg": 0.7422815191140703,
+                "rbp": 0.5793852736113749,
+                "success": 0.8657270228190531,
+                "nodes": 14,
+                "rejected": false
+            },
+            "test": {
+                "fitness": 0.707049493618746,
+                "ndcg": 0.7388945965064698,
+                "rbp": 0.593669082067851,
+                "success": 0.8775,
+                "nodes": 14,
+                "rejected": false
+            },
+            "median": 0.7005794353479234,
+            "championTrain": 0.7069022700135311,
+            "championTest": 0.707049493618746,
+            "evaluated": 8594
+        },
+        {
+            "generation": 153,
+            "train": {
+                "fitness": 0.7069022700135311,
+                "ndcg": 0.7422815191140703,
+                "rbp": 0.5793852736113749,
+                "success": 0.8657270228190531,
+                "nodes": 14,
+                "rejected": false
+            },
+            "test": {
+                "fitness": 0.707049493618746,
+                "ndcg": 0.7388945965064698,
+                "rbp": 0.593669082067851,
+                "success": 0.8775,
+                "nodes": 14,
+                "rejected": false
+            },
+            "median": 0.6997284569221992,
+            "championTrain": 0.7069022700135311,
+            "championTest": 0.707049493618746,
+            "evaluated": 8651
+        },
+        {
+            "generation": 154,
+            "train": {
+                "fitness": 0.7069022700135311,
+                "ndcg": 0.7422815191140703,
+                "rbp": 0.5793852736113749,
+                "success": 0.8657270228190531,
+                "nodes": 14,
+                "rejected": false
+            },
+            "test": {
+                "fitness": 0.707049493618746,
+                "ndcg": 0.7388945965064698,
+                "rbp": 0.593669082067851,
+                "success": 0.8775,
+                "nodes": 14,
+                "rejected": false
+            },
+            "median": 0.7011830687060056,
+            "championTrain": 0.7069022700135311,
+            "championTest": 0.707049493618746,
+            "evaluated": 8708
+        },
+        {
+            "generation": 155,
+            "train": {
+                "fitness": 0.7071022700135311,
+                "ndcg": 0.7422815191140703,
+                "rbp": 0.5793852736113749,
+                "success": 0.8657270228190531,
+                "nodes": 13,
+                "rejected": false
+            },
+            "test": {
+                "fitness": 0.707249493618746,
+                "ndcg": 0.7388945965064698,
+                "rbp": 0.593669082067851,
+                "success": 0.8775,
+                "nodes": 13,
+                "rejected": false
+            },
+            "median": 0.701911436402321,
+            "championTrain": 0.7071022700135311,
+            "championTest": 0.707249493618746,
+            "evaluated": 8762
+        },
+        {
+            "generation": 156,
+            "train": {
+                "fitness": 0.7071022700135311,
+                "ndcg": 0.7422815191140703,
+                "rbp": 0.5793852736113749,
+                "success": 0.8657270228190531,
+                "nodes": 13,
+                "rejected": false
+            },
+            "test": {
+                "fitness": 0.707249493618746,
+                "ndcg": 0.7388945965064698,
+                "rbp": 0.593669082067851,
+                "success": 0.8775,
+                "nodes": 13,
+                "rejected": false
+            },
+            "median": 0.7002694890547627,
+            "championTrain": 0.7071022700135311,
+            "championTest": 0.707249493618746,
+            "evaluated": 8819
+        },
+        {
+            "generation": 157,
+            "train": {
+                "fitness": 0.7071022700135311,
+                "ndcg": 0.7422815191140703,
+                "rbp": 0.5793852736113749,
+                "success": 0.8657270228190531,
+                "nodes": 13,
+                "rejected": false
+            },
+            "test": {
+                "fitness": 0.707249493618746,
+                "ndcg": 0.7388945965064698,
+                "rbp": 0.593669082067851,
+                "success": 0.8775,
+                "nodes": 13,
+                "rejected": false
+            },
+            "median": 0.698532280196042,
+            "championTrain": 0.7071022700135311,
+            "championTest": 0.707249493618746,
+            "evaluated": 8875
+        },
+        {
+            "generation": 158,
+            "train": {
+                "fitness": 0.7071022700135311,
+                "ndcg": 0.7422815191140703,
+                "rbp": 0.5793852736113749,
+                "success": 0.8657270228190531,
+                "nodes": 13,
+                "rejected": false
+            },
+            "test": {
+                "fitness": 0.707249493618746,
+                "ndcg": 0.7388945965064698,
+                "rbp": 0.593669082067851,
+                "success": 0.8775,
+                "nodes": 13,
+                "rejected": false
+            },
+            "median": 0.7026034932486088,
+            "championTrain": 0.7071022700135311,
+            "championTest": 0.707249493618746,
+            "evaluated": 8932
+        },
+        {
+            "generation": 159,
+            "train": {
+                "fitness": 0.7071022700135311,
+                "ndcg": 0.7422815191140703,
+                "rbp": 0.5793852736113749,
+                "success": 0.8657270228190531,
+                "nodes": 13,
+                "rejected": false
+            },
+            "test": {
+                "fitness": 0.707249493618746,
+                "ndcg": 0.7388945965064698,
+                "rbp": 0.593669082067851,
+                "success": 0.8775,
+                "nodes": 13,
+                "rejected": false
+            },
+            "median": 0.7021789224093493,
+            "championTrain": 0.7071022700135311,
+            "championTest": 0.707249493618746,
+            "evaluated": 8989
+        },
+        {
+            "generation": 160,
+            "train": {
+                "fitness": 0.7071022700135311,
+                "ndcg": 0.7422815191140703,
+                "rbp": 0.5793852736113749,
+                "success": 0.8657270228190531,
+                "nodes": 13,
+                "rejected": false
+            },
+            "test": {
+                "fitness": 0.707249493618746,
+                "ndcg": 0.7388945965064698,
+                "rbp": 0.593669082067851,
+                "success": 0.8775,
+                "nodes": 13,
+                "rejected": false
+            },
+            "median": 0.7026034932486088,
+            "championTrain": 0.7071022700135311,
+            "championTest": 0.707249493618746,
+            "evaluated": 9043
+        },
+        {
+            "generation": 161,
+            "train": {
+                "fitness": 0.7071022700135311,
+                "ndcg": 0.7422815191140703,
+                "rbp": 0.5793852736113749,
+                "success": 0.8657270228190531,
+                "nodes": 13,
+                "rejected": false
+            },
+            "test": {
+                "fitness": 0.707249493618746,
+                "ndcg": 0.7388945965064698,
+                "rbp": 0.593669082067851,
+                "success": 0.8775,
+                "nodes": 13,
+                "rejected": false
+            },
+            "median": 0.7030391431286407,
+            "championTrain": 0.7071022700135311,
+            "championTest": 0.707249493618746,
+            "evaluated": 9099
+        },
+        {
+            "generation": 162,
+            "train": {
+                "fitness": 0.7071022700135311,
+                "ndcg": 0.7422815191140703,
+                "rbp": 0.5793852736113749,
+                "success": 0.8657270228190531,
+                "nodes": 13,
+                "rejected": false
+            },
+            "test": {
+                "fitness": 0.707249493618746,
+                "ndcg": 0.7388945965064698,
+                "rbp": 0.593669082067851,
+                "success": 0.8775,
+                "nodes": 13,
+                "rejected": false
+            },
+            "median": 0.6999945875919158,
+            "championTrain": 0.7071022700135311,
+            "championTest": 0.707249493618746,
+            "evaluated": 9155
+        },
+        {
+            "generation": 163,
+            "train": {
+                "fitness": 0.7071022700135311,
+                "ndcg": 0.7422815191140703,
+                "rbp": 0.5793852736113749,
+                "success": 0.8657270228190531,
+                "nodes": 13,
+                "rejected": false
+            },
+            "test": {
+                "fitness": 0.707249493618746,
+                "ndcg": 0.7388945965064698,
+                "rbp": 0.593669082067851,
+                "success": 0.8775,
+                "nodes": 13,
+                "rejected": false
+            },
+            "median": 0.6987322801960419,
+            "championTrain": 0.7071022700135311,
+            "championTest": 0.707249493618746,
+            "evaluated": 9212
+        },
+        {
+            "generation": 164,
+            "train": {
+                "fitness": 0.7071357633764607,
+                "ndcg": 0.7423053606332071,
+                "rbp": 0.5794573743494753,
+                "success": 0.8657270228190531,
+                "nodes": 13,
+                "rejected": false
+            },
+            "test": {
+                "fitness": 0.7108702037872406,
+                "ndcg": 0.7434204842170882,
+                "rbp": 0.593669082067851,
+                "success": 0.8775,
+                "nodes": 13,
+                "rejected": false
+            },
+            "median": 0.7020179842403136,
+            "championTrain": 0.7071357633764607,
+            "championTest": 0.7108702037872406,
+            "evaluated": 9269
+        },
+        {
+            "generation": 165,
+            "train": {
+                "fitness": 0.7072316276360425,
+                "ndcg": 0.7424251909576844,
+                "rbp": 0.5794573743494753,
+                "success": 0.8657270228190531,
+                "nodes": 13,
+                "rejected": false
+            },
+            "test": {
+                "fitness": 0.7108702037872406,
+                "ndcg": 0.7434204842170882,
+                "rbp": 0.593669082067851,
+                "success": 0.8775,
+                "nodes": 13,
+                "rejected": false
+            },
+            "median": 0.6978523692259072,
+            "championTrain": 0.7072316276360425,
+            "championTest": 0.7108702037872406,
+            "evaluated": 9327
+        }
+    ]
+}

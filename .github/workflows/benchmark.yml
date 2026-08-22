@@ -14,6 +14,35 @@ permissions:
   contents: read
 
 jobs:
+  # Separate from `benchmark`, and deliberately not `continue-on-error`: this
+  # one touches no cluster, so it cannot flake, and a codegen-drift guard that
+  # is allowed to fail is not a guard.
+  shape-parity:
+    name: "Shape parity"
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7.0.1
+
+      - name: Set up Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+          cache: "npm"
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+        working-directory: frontend
+
+      # `to-elm.mjs` transcribes the champion JSON into the Elm literal through
+      # hand-maintained name tables. This is what catches the literal being
+      # edited away from the JSON it came from.
+      - name: Champion JSON and Elm literal agree
+        run: node benchmark/check-shape.mjs --shape benchmark/evolve/champion-options.json
+        working-directory: frontend
+
   benchmark:
     name: "Relevance benchmark"
     runs-on: ubuntu-latest

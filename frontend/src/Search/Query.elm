@@ -273,51 +273,152 @@ defaultPackagesShape =
 
 {-| How an option query is ranked.
 
-The same skeleton as the package shape, with two differences that follow from
-what an option name is. There is no popularity signal and no shortest-name
-rescore, because option names are a hierarchy rather than a namespace of
-competing packages. In exchange there are the two entry-point clauses: a query
-like `postgresql` almost always means `services.postgresql.enable`, which
-`attr_path_reverse` reaches by matching the path from its leaf inwards.
+Written by `benchmark/evolve`, not by hand, and transcribed from
+`benchmark/evolve/champion-options.json` by `to-elm.mjs`; `check-shape.mjs
+--shape` asserts the two still agree. Read it as a found artefact rather than an
+argued design - the reasons below are read off the result, not the intent behind
+it.
+
+An option matches on its name alone. The `must` is one `dis_max` over two
+readings of the name - the dash-glued query as a prefix of `attr_path_reverse`,
+and each word as `*word*` against the edge-ngrams - so a description no longer
+gates whether a document matches at all, only where it ranks.
+
+Three of the `should` clauses are wrapped in `constant_score`, which discards
+the score of what it wraps and returns its own boost. Their inner numbers -
+`QueryShape.boost 682.0` and the like - are therefore inert, and the weight each
+clause carries is the small outer boost. The search had no gradient to tidy them
+with, so they stand as found rather than being cleaned up into something that
+would no longer be the shape that was measured.
+
+The shortest-name rescore that the package shape uses turns out to pay here too,
+which the hand-written shape did not do.
 
 -}
 defaultOptionsShape : Shape
 defaultOptionsShape =
-    let
-        searchedFields : List ( FieldRef, Boost )
-        searchedFields =
-            List.concat
-                [ pathFieldWeights OptionName 6.0
-                , edgedFieldWeights OptionDescription 1.0
-                , plainFieldWeights FlakeName 0.5
-                , edgedFieldWeights ServicePackage 3.0
-                , edgedFieldWeights ServicePackages 3.0
-                ]
-
-        fuzzyFields : List ( FieldRef, Boost )
-        fuzzyFields =
-            fuzzyFallbackWeights
-                [ ( Path OptionName PathBase, 6.0 )
-                , ( Edged ServicePackage EdgeBase, 3.0 )
-                , ( Edged ServicePackages EdgeBase, 3.0 )
-                ]
-    in
     { must =
         Nonempty
-            (anyOf (crossFieldsClause searchedFields)
-                [ fuzzyClause fuzzyFields
-                , substringClause (KwOptionName KwBase)
-                ]
+            (DisMax
+                { tieBreaker = Just (QueryShape.unit 0.509)
+                , queries =
+                    Nonempty
+                        (PrefixQ
+                            { target = KwOptionName KwAttrPathReverse
+                            , term = Glued Dash
+                            , boost = Just (QueryShape.boost 26.4)
+                            , caseInsensitive = Nothing
+                            , name = Unnamed
+                            }
+                        )
+                        [ WildcardQ
+                            { target = KwOptionName KwEdge
+                            , term = PerWord { variants = True, wrap = Surround }
+                            , boost = Nothing
+                            , caseInsensitive = Nothing
+                            , name = Unnamed
+                            }
+                        ]
+                , boost = Just (QueryShape.boost 8.33)
+                }
             )
             []
     , should =
-        exactNameClauses (KwOptionName KwBase)
-            ++ [ phraseClause [ ( Edged OptionDescription EdgeBase, QueryShape.boost 3.0 ) ]
-               , entryPointClause
-               , enableLeafClause
-               ]
+        [ WildcardQ
+            { target = KwOptionName KwAttrPath
+            , term = Dotted
+            , boost = Just (QueryShape.boost 0.546)
+            , caseInsensitive = Nothing
+            , name = Unnamed
+            }
+        , PrefixQ
+            { target = KwOptionName KwAttrPathReverse
+            , term = AllButLast
+            , boost = Just (QueryShape.boost 206.0)
+            , caseInsensitive = Just True
+            , name = Unnamed
+            }
+        , WildcardQ
+            { target = KwOptionName KwAttrPathReverse
+            , term = DottedPlus ".package"
+            , boost = Just (QueryShape.boost 0.111)
+            , caseInsensitive = Nothing
+            , name = Unnamed
+            }
+        , ConstantScore
+            { filter =
+                MultiMatch
+                    { kind = PhrasePrefix
+                    , term = Fixed "enable"
+                    , analyzer = Nothing
+                    , autoGenerateSynonymsPhraseQuery = Nothing
+                    , fuzziness = Nothing
+                    , prefixLength = Nothing
+                    , operator = Just Or
+                    , minimumShouldMatch = Nothing
+                    , name = Unnamed
+                    , fields =
+                        [ ( Edged ServicePackages Edge, QueryShape.boost 373.0 )
+                        , ( Path OptionName PathEdge, QueryShape.boost 11.6 )
+                        , ( Edged ServicePackages Edge, QueryShape.boost 0.839 )
+                        , ( Path OptionName AttrPathReverse, QueryShape.boost 682.0 )
+                        ]
+                    , boost = Just (QueryShape.boost 5.45)
+                    }
+            , boost = QueryShape.boost 0.128
+            }
+        , ConstantScore
+            { filter =
+                MultiMatch
+                    { kind = Phrase
+                    , term = LastWord
+                    , analyzer = Nothing
+                    , autoGenerateSynonymsPhraseQuery = Nothing
+                    , fuzziness = Nothing
+                    , prefixLength = Nothing
+                    , operator = Nothing
+                    , minimumShouldMatch = Nothing
+                    , name = Unnamed
+                    , fields =
+                        [ ( Edged ServicePackages Edge, QueryShape.boost 206.0 )
+                        , ( Edged OptionDescription EdgeBase, QueryShape.boost 11.6 )
+                        , ( Edged OptionDescription EdgeAll, QueryShape.boost 0.65 )
+                        , ( Path OptionName PathBase, QueryShape.boost 630.0 )
+                        ]
+                    , boost = Just (QueryShape.boost 105.0)
+                    }
+            , boost = QueryShape.boost 0.0682
+            }
+        , ConstantScore
+            { filter =
+                MultiMatch
+                    { kind = CrossFields
+                    , term = LastWord
+                    , analyzer = Nothing
+                    , autoGenerateSynonymsPhraseQuery = Nothing
+                    , fuzziness = Nothing
+                    , prefixLength = Nothing
+                    , operator = Nothing
+                    , minimumShouldMatch = Nothing
+                    , name = Unnamed
+                    , fields =
+                        [ ( Edged ServicePackages Edge, QueryShape.boost 384.0 )
+                        , ( Path OptionName PathEdge, QueryShape.boost 11.6 )
+                        , ( Edged OptionDescription EdgeAll, QueryShape.boost 0.542 )
+                        , ( Path OptionName AttrPathReverse, QueryShape.boost 746.0 )
+                        ]
+                    , boost = Just (QueryShape.boost 39.3)
+                    }
+            , boost = QueryShape.boost 0.0975
+            }
+        ]
     , minimumShouldMatch = Nothing
-    , rescore = Nothing
+    , rescore =
+        Just
+            { windowSize = 100
+            , weight = QueryShape.boost 22.3
+            , fn = InverseFieldLength DocOptionName
+            }
     }
 
 
@@ -496,42 +597,6 @@ popularityClause field pivot =
         , boost = Just (QueryShape.boost 5.0)
         , name = Named ("popularity_" ++ QueryShape.rankFeatureFieldName field)
         , fn = Saturation (QueryShape.positive pivot)
-        }
-
-
-{-| The option a query most likely means: the one that switches the module on.
-
-`attr_path_reverse` tokenizes `services.postgresql.enable` from the leaf
-inwards, so the query `postgresql` spelled as `postgresql.enable` matches it
-exactly.
-
--}
-entryPointClause : Clause
-entryPointClause =
-    TermQ
-        { target = KwOptionName KwAttrPathReverse
-        , term = DottedPlus ".enable"
-        , boost = Just (QueryShape.boost 100.0)
-        , caseInsensitive = Nothing
-        , name = Named "module_entry_point"
-        }
-
-
-{-| Any `enable` option, well below the one the query actually names.
-
-This is the consolation prize for `entryPointClause`: when the exact path does
-not exist, an `enable` option is still more likely to be what was wanted than
-one of the module's settings.
-
--}
-enableLeafClause : Clause
-enableLeafClause =
-    TermQ
-        { target = KwOptionName KwAttrPathReverse
-        , term = Fixed "enable"
-        , boost = Just (QueryShape.boost 10.0)
-        , caseInsensitive = Nothing
-        , name = Named "module_enable_leaf"
         }
 
 
