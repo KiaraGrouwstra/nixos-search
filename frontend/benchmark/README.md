@@ -149,10 +149,17 @@ hole rather than a string - `Whole`, `Glued Dash`, `LastWord`, `DottedPlus
 except through `Fixed`.
 
 `defaultPackagesShape` and `defaultOptionsShape` in `Search/Query.elm` are what
-the app ships with. `defaultOptionsShape` was not chosen by hand: `evolve/`
-searched for it, and `evolve/champion-options.json` is the checkpoint it came
-from. `defaultPackagesShape` is still the hand-written one - the searches found
-train-set gains there that did not survive on the held-out queries.
+the app ships with. Neither was chosen by hand: `evolve/` searched for both, and
+`evolve/champion-packages.json` and `evolve/champion-options.json` are the
+checkpoints they came from.
+
+The packages champion carries a `reverted` list naming three clauses changed
+after the search stopped, each measured on its own against the full corpus. Two
+moved no metric at all - the search has no gradient toward removing something
+inert, so it leaves such clauses lying around - and the third traded 0.0017 RBP
+for the 34 ms per query that a `wildcard` over an edge-ngram subfield was
+costing. The `asFound` block holds what the search itself reported, so the
+edit is visible rather than folded into the champion's own numbers.
 
 - `evolve/grammar.mjs` is the JS mirror of the Elm type - node kinds, their
   parameters, value domains, and the per-track field pool. `QueryShape.decoder`
@@ -207,7 +214,8 @@ slice is decided by a subset.
 
 ```
 node benchmark/check-shape.mjs --reference HEAD~1
-node benchmark/check-shape.mjs --shape benchmark/evolve/champion-options.json
+node benchmark/check-shape.mjs --shape benchmark/evolve/champion-packages.json \
+    --shape benchmark/evolve/champion-options.json
 ```
 
 Both compare request bodies byte-for-byte over every curated query, with no

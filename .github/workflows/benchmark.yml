@@ -40,7 +40,7 @@ jobs:
       # hand-maintained name tables. This is what catches the literal being
       # edited away from the JSON it came from.
       - name: Champion JSON and Elm literal agree
-        run: node benchmark/check-shape.mjs --shape benchmark/evolve/champion-options.json
+        run: node benchmark/check-shape.mjs --shape benchmark/evolve/champion-packages.json --shape benchmark/evolve/champion-options.json
         working-directory: frontend
 
   benchmark:

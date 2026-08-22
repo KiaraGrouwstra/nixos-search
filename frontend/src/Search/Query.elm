@@ -26,7 +26,6 @@ import Search exposing (Sort(..), Terms)
 import Search.QueryShape as QueryShape
     exposing
         ( Analyzer(..)
-        , Boost
         , Clause(..)
         , ClauseName(..)
         , Context
@@ -37,13 +36,13 @@ import Search.QueryShape as QueryShape
         , Fuzziness(..)
         , Glue(..)
         , KeywordTarget(..)
+        , MinimumShouldMatch(..)
         , MultiMatchKind(..)
         , Nonempty(..)
         , Operator(..)
         , PathField(..)
         , PathKwSub(..)
         , PathSub(..)
-        , PlainField(..)
         , RankFeatureField(..)
         , RankFeatureFn(..)
         , RescoreFn(..)
@@ -213,59 +212,182 @@ optionsBodyWith shape types query from size sort =
 
 {-| How a package query is ranked.
 
-Reading it top to bottom: a hit has to match the words somehow (`must`), and
-then a stack of `should` clauses says which of the matches deserve to be first -
-an exact attribute name above a prefix of one, a description phrase above a
-scattering of the same words, a widely packaged program above an obscure one.
-The rescore pass then breaks the remaining ties toward shorter names.
+Written by `benchmark/evolve`, not by hand, and transcribed from
+`benchmark/evolve/champion-packages.json` by `to-elm.mjs`; `check-shape.mjs
+--shape` asserts the two still agree. Read it as a found artefact rather than an
+argued design - the reasons below are read off the result, not the intent behind
+it.
+
+A package can now match on its description alone. The `must` is a `dis_max` over
+a `constant_score` phrase on the descriptions, a fuzzy `best_fields` on the last
+word of the query, and each word as `*word*` against the attribute name; the
+hand-written shape reached the descriptions only through `should`, so a query
+that named no package matched nothing. That is where the gain is - `multiterm`
+and `intent` move by +0.157 and +0.116 nDCG, and the other six categories move by
+at most +0.058.
+
+Two of the clauses look like they should be inert and are not. The second
+`rank_feature` on `package_repology_repos` duplicates a field the clause below it
+already reads, and the `bool` carries a `rank_feature` in its `must` next to a
+lone scoring `should`; removing either costs 0.014 and 0.007 nDCG respectively.
+They stand because they were measured, not because they read well.
 
 -}
 defaultPackagesShape : Shape
 defaultPackagesShape =
-    let
-        searchedFields : List ( FieldRef, Boost )
-        searchedFields =
-            List.concat
-                [ pathFieldWeights PackageAttrName 9.0
-                , edgedFieldWeights PackagePrograms 9.0
-                , edgedFieldWeights PackageMainProgram 9.0
-                , edgedFieldWeights PackagePname 6.0
-                , edgedFieldWeights PackageDescription 1.3
-                , edgedFieldWeights PackageLongDescription 1.0
-                , plainFieldWeights FlakeName 0.5
-                ]
-
-        fuzzyFields : List ( FieldRef, Boost )
-        fuzzyFields =
-            fuzzyFallbackWeights
-                [ ( Path PackageAttrName PathBase, 9.0 )
-                , ( Edged PackagePrograms EdgeBase, 9.0 )
-                , ( Edged PackageMainProgram EdgeBase, 9.0 )
-                , ( Edged PackagePname EdgeBase, 6.0 )
-                ]
-    in
     { must =
         Nonempty
-            (anyOf (crossFieldsClause searchedFields)
-                [ fuzzyClause fuzzyFields
-                , substringClause (KwAttrName KwBase)
-                ]
+            (DisMax
+                { tieBreaker = Just (QueryShape.unit 0.387)
+                , queries =
+                    Nonempty
+                        (ConstantScore
+                            { filter =
+                                MultiMatch
+                                    { kind = Phrase
+                                    , term = MultiWordWhole
+                                    , analyzer = Nothing
+                                    , autoGenerateSynonymsPhraseQuery = Nothing
+                                    , fuzziness = Nothing
+                                    , prefixLength = Nothing
+                                    , operator = Nothing
+                                    , minimumShouldMatch = Nothing
+                                    , name = Unnamed
+                                    , fields =
+                                        [ ( Edged PackageDescription EdgeBase, QueryShape.boost 7.42 )
+                                        , ( Edged PackageLongDescription EdgeBase, QueryShape.boost 1.0 )
+                                        ]
+                                    , boost = Nothing
+                                    }
+                            , boost = QueryShape.boost 110.0
+                            }
+                        )
+                        [ MultiMatch
+                            { kind = BestFields
+                            , term = LastWord
+                            , analyzer = Nothing
+                            , autoGenerateSynonymsPhraseQuery = Nothing
+                            , fuzziness = Just (Edits 1)
+                            , prefixLength = Just 1
+                            , operator = Nothing
+                            , minimumShouldMatch = Just (MsmPercent 20)
+                            , name = NamedWithWords "fuzzy_"
+                            , fields =
+                                [ ( Path PackageAttrName PathBase, QueryShape.boost 0.378 )
+                                , ( Edged PackagePrograms EdgeBase, QueryShape.boost 0.441 )
+                                , ( Edged PackageMainProgram EdgeBase, QueryShape.boost 0.413 )
+                                , ( Edged PackagePname EdgeBase, QueryShape.boost 0.30000000000000004 )
+                                ]
+                            , boost = Nothing
+                            }
+                        , WildcardQ
+                            { target = KwAttrName KwBase
+                            , term = PerWord { variants = True, wrap = Surround }
+                            , boost = Nothing
+                            , caseInsensitive = Just True
+                            , name = Unnamed
+                            }
+                        ]
+                , boost = Nothing
+                }
             )
             []
     , should =
-        exactNameClauses (KwAttrName KwBase)
-            ++ [ phraseClause
-                    [ ( Edged PackageDescription EdgeBase, QueryShape.boost 3.0 )
-                    , ( Edged PackageLongDescription EdgeBase, QueryShape.boost 1.0 )
-                    ]
-               , popularityClause PackageRepologyRepos 20.0
-               , popularityClause PackageDepCount 1000.0
-               ]
+        [ TermQ
+            { target = KwAttrName KwBase
+            , term = Glued Dash
+            , boost = Just (QueryShape.boost 127.0)
+            , caseInsensitive = Nothing
+            , name = Unnamed
+            }
+        , PrefixQ
+            { target = KwAttrName KwBase
+            , term = Glued Concat
+            , boost = Just (QueryShape.boost 16.4)
+            , caseInsensitive = Just True
+            , name = Unnamed
+            }
+        , MultiMatch
+            { kind = CrossFields
+            , term = AllButLast
+            , analyzer = Just KeywordAnalyzer
+            , autoGenerateSynonymsPhraseQuery = Nothing
+            , fuzziness = Nothing
+            , prefixLength = Nothing
+            , operator = Nothing
+            , minimumShouldMatch = Nothing
+            , name = Unnamed
+            , fields =
+                [ ( Edged PackagePname Edge, QueryShape.boost 3.52 )
+                , ( Edged PackageDescription EdgeBase, QueryShape.boost 1.17 )
+                , ( Edged PackagePrograms EdgeBase, QueryShape.boost 117.0 )
+                ]
+            , boost = Nothing
+            }
+        , PrefixQ
+            { target = KwPname
+            , term = Glued Concat
+            , boost = Just (QueryShape.boost 10.1)
+            , caseInsensitive = Just True
+            , name = Unnamed
+            }
+        , RankFeatureQ
+            { field = PackageRepologyRepos
+            , boost = Just (QueryShape.boost 328.0)
+            , name = Unnamed
+            , fn = Log (QueryShape.positive 5140.0)
+            }
+        , RankFeatureQ
+            { field = PackageRepologyRepos
+            , boost = Just (QueryShape.boost 5.0)
+            , name = Named "popularity_package_repology_repos"
+            , fn = Saturation (QueryShape.positive 13.5)
+            }
+        , Bool_
+            { must =
+                [ RankFeatureQ
+                    { field = PackageDepCount
+                    , boost = Nothing
+                    , name = Unnamed
+                    , fn = Sigmoid (QueryShape.positive 7580.0) (QueryShape.unit 0.434)
+                    }
+                ]
+            , should =
+                [ MultiMatch
+                    { kind = BestFields
+                    , term = PerWord { variants = False, wrap = PlainWord }
+                    , analyzer = Just LowercaseAnalyzer
+                    , autoGenerateSynonymsPhraseQuery = Nothing
+                    , fuzziness = Nothing
+                    , prefixLength = Nothing
+                    , operator = Nothing
+                    , minimumShouldMatch = Nothing
+                    , name = Unnamed
+                    , fields =
+                        [ ( Edged PackageLongDescription Edge, QueryShape.boost 12.0 )
+                        , ( Edged PackageAttrSet EdgeBase, QueryShape.boost 2.97 )
+                        , ( Path PackageAttrName PathEdge, QueryShape.boost 0.307 )
+                        ]
+                    , boost = Just (QueryShape.boost 0.128)
+                    }
+                ]
+            , mustNot = []
+            , minimumShouldMatch = Nothing
+            , boost = Just (QueryShape.boost 0.364)
+            }
+        , WildcardQ
+            { target = KwPrograms
+            , term = Dotted
+            , boost = Just (QueryShape.boost 12.8)
+            , caseInsensitive = Just True
+            , name = Unnamed
+            }
+        ]
     , minimumShouldMatch = Nothing
     , rescore =
         Just
             { windowSize = 100
-            , weight = QueryShape.boost 20.0
+            , weight = QueryShape.boost 30.3
             , fn = InverseFieldLength DocPackageAttrName
             }
     }
@@ -420,237 +542,6 @@ defaultOptionsShape =
             , fn = InverseFieldLength DocOptionName
             }
     }
-
-
-
--- CLAUSES THE TWO SHAPES SHARE
-
-
-{-| Score a hit by its best-matching branch, plus a share of each of the others.
-
-The branches are alternative ways of reading the same query - as words across
-the indexed fields, as words a typo away from them, as a substring of a name -
-so summing them would reward a hit for being found three ways rather than for
-being the right hit. `dis_max` takes the best reading instead, and
-`tie_breaker` keeps the others from counting for nothing at all.
-
--}
-anyOf : Clause -> List Clause -> Clause
-anyOf first rest =
-    DisMax
-        { tieBreaker = Just (QueryShape.unit 0.7)
-        , queries = Nonempty first rest
-        , boost = Nothing
-        }
-
-
-{-| The main clause: every query word has to appear, but not necessarily in the
-same field.
-
-`cross_fields` is what makes `firefox esr` work when `firefox` is the name and
-`esr` is in the description. The `whitespace` analyzer keeps the query's
-punctuation and case, since an attribute name is not English and stemming it
-does more harm than good.
-
--}
-crossFieldsClause : List ( FieldRef, Boost ) -> Clause
-crossFieldsClause fields =
-    MultiMatch
-        { kind = CrossFields
-        , term = Whole
-        , analyzer = Just Whitespace
-        , autoGenerateSynonymsPhraseQuery = Just False
-        , fuzziness = Nothing
-        , prefixLength = Nothing
-        , operator = Just And
-        , minimumShouldMatch = Nothing
-        , name = NamedWithWords "multi_match_"
-        , fields = fields
-        , boost = Nothing
-        }
-
-
-{-| The same query one edit away, so a typo still finds something.
-
-It is weighted far below the exact clause - see `fuzzyFallbackWeights` - because
-it should decide the ranking only when nothing matched properly. `prefix_length`
-of 1 keeps the first character fixed, which is both much cheaper and a good
-approximation of how people mistype.
-
--}
-fuzzyClause : List ( FieldRef, Boost ) -> Clause
-fuzzyClause fields =
-    MultiMatch
-        { kind = BestFields
-        , term = Whole
-        , analyzer = Nothing
-        , autoGenerateSynonymsPhraseQuery = Nothing
-        , fuzziness = Just (Edits 1)
-        , prefixLength = Just 1
-        , operator = Just And
-        , minimumShouldMatch = Nothing
-        , name = NamedWithWords "fuzzy_"
-        , fields = fields
-        , boost = Nothing
-        }
-
-
-{-| Each query word as a substring of the name, so `sql` finds `postgresql`.
-
-No analysed field can do this - they match whole tokens - so it takes a
-`wildcard` against the keyword itself.
-
--}
-substringClause : KeywordTarget -> Clause
-substringClause target =
-    WildcardQ
-        { target = target
-        , term = PerWord { variants = True, wrap = Surround }
-        , boost = Nothing
-        , caseInsensitive = Just True
-        , name = Unnamed
-        }
-
-
-{-| The name typed exactly, and the name typed as far as the user got.
-
-Both are worth a lot: someone who types an attribute name wants that attribute,
-not the thirty packages that mention it. The prefix clause is worth less than
-the exact one so that `git` outranks `gitFull` without hiding it.
-
-The three clauses of each are the three ways a multi-word query can spell one
-name; `Search.QueryShape` collapses them back to one where they coincide, which
-is every single-word query.
-
--}
-exactNameClauses : KeywordTarget -> List Clause
-exactNameClauses target =
-    let
-        spellings : List Term
-        spellings =
-            List.map Glued [ Concat, Dash, Underscore ]
-    in
-    List.map
-        (\term ->
-            TermQ
-                { target = target
-                , term = term
-                , boost = Just (QueryShape.boost 100.0)
-                , caseInsensitive = Nothing
-                , name = Unnamed
-                }
-        )
-        spellings
-        ++ List.map
-            (\term ->
-                PrefixQ
-                    { target = target
-                    , term = term
-                    , boost = Just (QueryShape.boost 20.0)
-                    , caseInsensitive = Just True
-                    , name = Unnamed
-                    }
-            )
-            spellings
-
-
-{-| The whole query as a phrase in the descriptions.
-
-`constant_score` because what matters is that the words appear together in that
-order at all; how often they do says nothing about which package the user meant.
-Single-word queries skip it, since a one-word phrase is just the word and the
-main clause has already scored it.
-
--}
-phraseClause : List ( FieldRef, Boost ) -> Clause
-phraseClause fields =
-    ConstantScore
-        { filter =
-            MultiMatch
-                { kind = Phrase
-                , term = MultiWordWhole
-                , analyzer = Nothing
-                , autoGenerateSynonymsPhraseQuery = Nothing
-                , fuzziness = Nothing
-                , prefixLength = Nothing
-                , operator = Nothing
-                , minimumShouldMatch = Nothing
-                , name = Unnamed
-                , fields = fields
-                , boost = Nothing
-                }
-        , boost = QueryShape.boost 80.0
-        }
-
-
-{-| A popularity signal, saturating at `pivot`.
-
-Saturation is the point: the difference between 1 and 20 repositories packaging
-something says a lot about which one is meant, and the difference between 500
-and 1000 says nothing.
-
--}
-popularityClause : RankFeatureField -> Float -> Clause
-popularityClause field pivot =
-    RankFeatureQ
-        { field = field
-        , boost = Just (QueryShape.boost 5.0)
-        , name = Named ("popularity_" ++ QueryShape.rankFeatureFieldName field)
-        , fn = Saturation (QueryShape.positive pivot)
-        }
-
-
-
--- FIELD WEIGHTS
-
-
-{-| What a field's subfields are worth relative to the field itself.
-
-The `.*` pattern covers the `.edge` n-grams and the attribute-path analyses. A
-match there is a weaker signal than a match on the field proper - an edge n-gram
-of `postgresql` matches `post` - so it is scored below it.
-
--}
-subfieldWeight : Float
-subfieldWeight =
-    0.6
-
-
-{-| Scales the field weights of the fuzzy clause down to a fallback.
--}
-fuzzyFallbackWeight : Float
-fuzzyFallbackWeight =
-    0.05
-
-
-fuzzyFallbackWeights : List ( FieldRef, Float ) -> List ( FieldRef, Boost )
-fuzzyFallbackWeights =
-    List.map (Tuple.mapSecond (\score -> QueryShape.boost (score * fuzzyFallbackWeight)))
-
-
-{-| An attribute-path field and the `.*` pattern covering its subfields.
--}
-pathFieldWeights : PathField -> Float -> List ( FieldRef, Boost )
-pathFieldWeights field score =
-    [ ( Path field PathBase, QueryShape.boost score )
-    , ( Path field PathAll, QueryShape.boost (score * subfieldWeight) )
-    ]
-
-
-{-| An edge-ngram field and the `.*` pattern covering its `.edge` subfield.
--}
-edgedFieldWeights : EdgedField -> Float -> List ( FieldRef, Boost )
-edgedFieldWeights field score =
-    [ ( Edged field EdgeBase, QueryShape.boost score )
-    , ( Edged field EdgeAll, QueryShape.boost (score * subfieldWeight) )
-    ]
-
-
-{-| A field with no subfields, so no `.*` pattern - it would resolve to nothing.
--}
-plainFieldWeights : PlainField -> Float -> List ( FieldRef, Boost )
-plainFieldWeights field score =
-    [ ( Plain field, QueryShape.boost score ) ]
 
 
 

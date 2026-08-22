@@ -10,7 +10,6 @@ module Search.QueryShape exposing
     , Boost, boost, boostValue, Unit, unit, unitValue, Positive, positive, positiveValue
     , Nonempty(..)
     , encode, encodeRescore, negatedWordClauses
-    , rankFeatureFieldName
     , decoder, toJson, validate
     )
 
@@ -77,7 +76,6 @@ decides ranking, the other half decides membership.
 # Rendering
 
 @docs encode, encodeRescore, negatedWordClauses
-@docs rankFeatureFieldName
 
 
 # Carrying a shape as data
