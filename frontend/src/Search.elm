@@ -29,6 +29,7 @@ module Search exposing
     , update
     , view
     , viewBucket
+    , viewChannels
     , viewFlakes
     , viewResult
     , viewSearchInput
@@ -1205,7 +1206,7 @@ viewSearchInput nixosChannels outMsg categoryName selectedChannel searchQuery ma
             ]
         , div [ class "search-input-options" ]
             ((selectedChannel
-                |> Maybe.map (\x -> viewChannels nixosChannels outMsg x)
+                |> Maybe.map (viewChannels (outMsg << ChannelChange) nixosChannels)
                 |> Maybe.withDefault []
              )
                 ++ [ Html.map outMsg (viewSortSelection currentSort) ]
@@ -1222,12 +1223,14 @@ hideTypeaheadOnEscape outMsg key =
         Json.Decode.fail "not Escape"
 
 
+{-| The channel selection. The pages that show data of one channel use it.
+-}
 viewChannels :
-    List NixOSChannel
-    -> (Msg a b -> c)
+    (String -> msg)
+    -> List NixOSChannel
     -> String
-    -> List (Html c)
-viewChannels nixosChannels outMsg selectedChannel =
+    -> List (Html msg)
+viewChannels toMsg nixosChannels selectedChannel =
     if List.isEmpty nixosChannels then
         []
 
@@ -1237,7 +1240,7 @@ viewChannels nixosChannels outMsg selectedChannel =
                 [ class "radio-group-segmented channel-radios" ]
                 (legend [ class "channel-title" ] [ text "Channels:" ]
                     :: List.map
-                        (viewChannelRadio outMsg selectedChannel)
+                        (viewChannelRadio toMsg selectedChannel)
                         nixosChannels
                 )
             ]
@@ -1253,8 +1256,8 @@ viewChannels nixosChannels outMsg selectedChannel =
             )
 
 
-viewChannelRadio : (Msg a b -> c) -> String -> NixOSChannel -> Html c
-viewChannelRadio outMsg selectedChannel channel =
+viewChannelRadio : (String -> msg) -> String -> NixOSChannel -> Html msg
+viewChannelRadio toMsg selectedChannel channel =
     label
         [ classList
             [ ( "btn", True )
@@ -1267,7 +1270,7 @@ viewChannelRadio outMsg selectedChannel channel =
             [ type_ "radio"
             , name "channel"
             , checked (channel.id == selectedChannel)
-            , onClick <| outMsg (ChannelChange channel.id)
+            , onClick (toMsg channel.id)
             ]
             []
         ]
